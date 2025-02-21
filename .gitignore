@@ -112,3 +112,7 @@ outputs/
 .vscode/
 .idea/
 __MACOSX/
+
+XEUS/
+VoxCeleb/
+eer_distribution.png

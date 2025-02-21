@@ -1,52 +1,66 @@
 from torch import nn
 from torch.nn import Sequential
+import torch
+from espnet2.tasks.ssl import SSLTask
 
 
-class BaselineModel(nn.Module):
+class XeusEmbedder(nn.Module):
     """
-    Simple MLP
+    Xeus-based audio embedding extractor with temporal pooling
     """
 
-    def __init__(self, n_feats, n_class, fc_hidden=512):
+    def __init__(self, pretrain):
         """
         Args:
-            n_feats (int): number of input features.
-            n_class (int): number of classes.
-            fc_hidden (int): number of hidden features.
+            xeus_model (nn.Module): pretrained Xeus model
+            pool_method (str): temporal pooling method (mean/max)
         """
         super().__init__()
-
-        self.net = Sequential(
-            # people say it can approximate any function...
-            nn.Linear(in_features=n_feats, out_features=fc_hidden),
-            nn.ReLU(),
-            nn.Linear(in_features=fc_hidden, out_features=fc_hidden),
-            nn.ReLU(),
-            nn.Linear(in_features=fc_hidden, out_features=n_class),
+        self.xeus, _ = SSLTask.build_model_from_file(
+            None,
+            model_file=pretrain
         )
+        self.xeus.eval()
+        for param in self.xeus.parameters():
+            param.requires_grad_(False)
 
-    def forward(self, data_object, **batch):
+    def forward(self, batch):
         """
-        Model forward method.
+        Processing pipeline:
+        1. Feature extraction with Xeus
+        2. Chunk splitting by durations
+        3. Temporal pooling
 
         Args:
-            data_object (Tensor): input vector.
+            waveforms (Tensor): raw audio [batch, time]
+            wav_lens (Tensor): chunk lengths for each sample
+
         Returns:
-            output (dict): output dict containing logits.
+            embeddings (Tensor): pooled embeddings [batch, feat_dim]
         """
-        return {"logits": self.net(data_object)}
+        data_object = batch['data_object']
+        lengths = batch['lengths']
+        # Feature extraction
+        feats = self.xeus.encode(
+            data_object,
+            lengths,
+            use_mask=False,
+            use_final_output=False
+        )[0][-1]
+
+        # pooled = torch.mean(feats, dim=1)
+        mu = feats.mean(dim=1)
+        std = feats.std(dim=1)
+        pooled = torch.cat([mu, std], dim=1)
+
+        return {"embeddings": pooled}
 
     def __str__(self):
-        """
-        Model prints with the number of parameters.
-        """
-        all_parameters = sum([p.numel() for p in self.parameters()])
-        trainable_parameters = sum(
-            [p.numel() for p in self.parameters() if p.requires_grad]
-        )
+        """Информация о модели"""
+        stats = [
+            f"Xeus model: {self.xeus.__class__.__name__}",
+            f"Frozen params: {sum(p.numel() for p in self.xeus.parameters())}",
+            f"Trainable params: {sum(p.numel() for p in self.parameters() if p.requires_grad)}"
+        ]
+        return "\n".join(stats)
 
-        result_info = super().__str__()
-        result_info = result_info + f"\nAll parameters: {all_parameters}"
-        result_info = result_info + f"\nTrainable parameters: {trainable_parameters}"
-
-        return result_info

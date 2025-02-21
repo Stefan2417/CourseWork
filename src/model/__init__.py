@@ -1,5 +1,5 @@
-from src.model.baseline_model import BaselineModel
+from src.model.baseline_model import XeusEmbedder
 
 __all__ = [
-    "BaselineModel",
+    "XeusEmbedder",
 ]

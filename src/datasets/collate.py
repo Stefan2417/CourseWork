@@ -1,25 +1,21 @@
-import torch
+import logging
 
+import torch
+from torch.nn.utils.rnn import pad_sequence
+
+logger = logging.getLogger(__name__)
 
 def collate_fn(dataset_items: list[dict]):
-    """
-    Collate and pad fields in the dataset items.
-    Converts individual items into a batch.
+    waveforms = [item["data_object"] for item in dataset_items] # (time,)
+    labels = torch.LongTensor([item["label"] for item in dataset_items])
+    lengths = torch.LongTensor([item['length'] for item in dataset_items])
+    names = [item["name"] for item in dataset_items]
 
-    Args:
-        dataset_items (list[dict]): list of objects from
-            dataset.__getitem__.
-    Returns:
-        result_batch (dict[Tensor]): dict, containing batch-version
-            of the tensors.
-    """
+    padded_waveforms = pad_sequence(waveforms, batch_first=True)
 
-    result_batch = {}
-
-    # example of collate_fn
-    result_batch["data_object"] = torch.vstack(
-        [elem["data_object"] for elem in dataset_items]
-    )
-    result_batch["labels"] = torch.tensor([elem["labels"] for elem in dataset_items])
-
-    return result_batch
+    return {
+        "data_object": padded_waveforms,
+        "labels": labels,
+        "lengths": lengths,
+        "names" : names
+    }
