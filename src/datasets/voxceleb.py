@@ -12,20 +12,24 @@ from src.utils.io_utils import ROOT_PATH, read_json, write_json
 from src.datasets.data_utils import parse_dataset_speakers, extract_speaker_id
 import soundfile as sf
 from pathlib import Path
-
+from librosa import resample
 
 
 logger = logging.getLogger(__name__)
 
-class VoxCeleb1(BaseDataset):
+class VoxCeleb(BaseDataset):
     def __init__(
             self,
             dir_name,
             sample_rate,
             max_duration,
+            celeb_id,
+            extension,
             **kwargs
     ):
-        index_path = ROOT_PATH / "data" / "VoxCeleb1" / "index.json"
+        self.celeb_id = celeb_id
+        index_path = ROOT_PATH / "data" / f"VoxCeleb{self.celeb_id}" / "index.json"
+        self.extension = extension
         self.dir_name = dir_name
         self.sample_rate = sample_rate
         self.max_samples = max_duration * sample_rate
@@ -57,10 +61,10 @@ class VoxCeleb1(BaseDataset):
                 the dataset. The dict has required metadata information,
                 such as label and object path.
         """
-        index_path = ROOT_PATH / "data" / "VoxCeleb1"
+        index_path = ROOT_PATH / "data" / f"VoxCeleb{self.celeb_id}"
         index_path.mkdir(exist_ok=True, parents=True)
 
-        index_dict_format = parse_dataset_speakers(self.dir_name)
+        index_dict_format = parse_dataset_speakers(dir_name=self..dir_name, extension=self.extension)
         index = []
         for speaker_id, paths in index_dict_format.items():
             for path in paths:
@@ -108,6 +112,9 @@ class VoxCeleb1(BaseDataset):
 
     def load_object(self, path):
         waveform, sr = sf.read(path)
+        if sr != self.sample_rate:
+            waveform = resample(waveform, orig_sr=sr, target_sr=16000)
+            sr = 16000
         assert sr == self.sample_rate
         if len(waveform) > self.max_samples:
             waveform = waveform[:self.max_samples]

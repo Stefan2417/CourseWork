@@ -1,5 +1,5 @@
 defaults:
-  - model: baseline
+  - model: xeus_baseline
   - datasets: VoxCeleb1 # we do not want to run inference on training data
   - dataloader: VoxCeleb1
   - transforms: example

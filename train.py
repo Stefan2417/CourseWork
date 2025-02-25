@@ -52,12 +52,13 @@ def main(config):
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
-    epoch_len = config.trainer.get("epoch_len")
+    # epoch_len = config.trainer.get("epoch_len")
+    epoch_len = None
 
     trainer = Trainer(
         model=model,
         criterion=loss_function,
-        metrics=metrics,
+        metrics=None,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         config=config,
@@ -66,7 +67,7 @@ def main(config):
         epoch_len=epoch_len,
         logger=logger,
         writer=writer,
-        batch_transforms=batch_transforms,
+        batch_transforms=None,
         skip_oom=config.trainer.get("skip_oom", True),
     )
 

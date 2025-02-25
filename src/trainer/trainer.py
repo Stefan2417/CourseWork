@@ -30,14 +30,15 @@ class Trainer(BaseTrainer):
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
         metric_funcs = self.metrics["inference"]
+
         if self.is_train:
             metric_funcs = self.metrics["train"]
             self.optimizer.zero_grad()
 
-        outputs = self.model(**batch)
+        outputs = self.model(batch)
         batch.update(outputs)
 
-        all_losses = self.criterion(**batch)
+        all_losses = self.criterion(batch)
         batch.update(all_losses)
 
         if self.is_train:

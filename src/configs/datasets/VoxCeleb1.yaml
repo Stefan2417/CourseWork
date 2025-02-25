@@ -1,6 +1,8 @@
 voxceleb1:
-  _target_: src.datasets.VoxCeleb1
+  _target_: src.datasets.VoxCeleb
   dir_name: '/home/stefan/Documents/CourseWork/VoxCeleb/vox1_dev_wav/wav'
   instance_transforms: ${transforms.instance_transforms.inference}
   sample_rate: 16000
   max_duration: 40
+  celeb_id: 1
+  extension: '.wav'
