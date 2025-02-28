@@ -20,29 +20,30 @@ logger = logging.getLogger(__name__)
 class VoxCeleb(BaseDataset):
     def __init__(
             self,
+            name,
             dir_name,
             sample_rate,
             max_duration,
-            celeb_id,
             extension,
+            limit=None,
+            shuffle_index=False,
             **kwargs
     ):
-        self.celeb_id = celeb_id
-        index_path = ROOT_PATH / "data" / f"VoxCeleb{self.celeb_id}" / "index.json"
+        index_path = ROOT_PATH / "data" / name / "index.json"
+        self.name = name
         self.extension = extension
         self.dir_name = dir_name
         self.sample_rate = sample_rate
         self.max_samples = max_duration * sample_rate
+        self.give_label = {}
+        self.cnt_labels = 0
 
         if index_path.exists():
             index = read_json(str(index_path))
         else:
             index = self._create_index()
 
-
-        logger.info(f'TOTAL NUMBER OF INDEX: {len(index)}')
-
-        super().__init__(index, **kwargs)
+        super().__init__(index, limit, shuffle_index, **kwargs)
 
     def _create_index(self):
         """
@@ -61,10 +62,10 @@ class VoxCeleb(BaseDataset):
                 the dataset. The dict has required metadata information,
                 such as label and object path.
         """
-        index_path = ROOT_PATH / "data" / f"VoxCeleb{self.celeb_id}"
+        index_path = ROOT_PATH / "data" / self.name
         index_path.mkdir(exist_ok=True, parents=True)
 
-        index_dict_format = parse_dataset_speakers(dir_name=self..dir_name, extension=self.extension)
+        index_dict_format = parse_dataset_speakers(dir_name=self.dir_name, extension=self.extension)
         index = []
         for speaker_id, paths in index_dict_format.items():
             for path in paths:
@@ -72,7 +73,13 @@ class VoxCeleb(BaseDataset):
                 parts = path_obj.parts[-3:] if len(path_obj.parts) >= 3 else path_obj.parts
 
                 suffix = Path(*parts).as_posix()
-                index.append({'label' : extract_speaker_id(speaker_id), 'path' : path, 'name' : suffix})
+                label = extract_speaker_id(speaker_id)
+                if label not in self.give_label:
+                    self.give_label[label] = self.cnt_labels
+                    self.cnt_labels += 1
+                label = self.give_label[label]
+
+                index.append({'label' : label, 'path' : path, 'name' : suffix})
 
         write_json(index, str(index_path / "index.json"))
         return index
@@ -111,17 +118,17 @@ class VoxCeleb(BaseDataset):
         return instance_data
 
     def load_object(self, path):
-        waveform, sr = sf.read(path)
-        if sr != self.sample_rate:
-            waveform = resample(waveform, orig_sr=sr, target_sr=16000)
-            sr = 16000
+        waveform, sr = torchaudio.load(path, format=self.extension)
+        # if sr != self.sample_rate:
+        #     waveform = resample(waveform, orig_sr=sr, target_sr=16000)
+        #     sr = 16000
         assert sr == self.sample_rate
-        if len(waveform) > self.max_samples:
-            waveform = waveform[:self.max_samples]
+        if waveform.size(1) > self.max_samples:
+            waveform = waveform[:, :self.max_samples]
 
-        eps = 1e-7
-        waveform = (waveform - waveform.mean()) / (waveform.std() + eps)
-
+        waveform = waveform[0] # TODO case multi-channel
+        # eps = 1e-7
+        # waveform = (waveform - waveform.mean()) / (waveform.std() + eps)
         return torch.Tensor(waveform)
 
     def preprocess_data(self, instance_data):

@@ -1,0 +1,24 @@
+device: "auto"
+train: []
+train_inference:
+  - _target_: src.metrics.EERMetric
+    device: ${metrics.device}
+    name: "VoxCeleb1-Clean EER"
+    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/veri_test2.txt"
+inference: # metrics that are calculated during inference (eval)
+  - _target_: src.metrics.EERMetric
+    device: ${metrics.device}
+    name: "VoxCeleb1-Clean EER"
+    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/veri_test2.txt"
+  - _target_: src.metrics.EERMetric
+    device: ${metrics.device}
+    name: "VoxCeleb1-H-Clean EER"
+    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/list_test_hard2.txt"
+  - _target_: src.metrics.EERMetric
+    device: ${metrics.device}
+    name: "VoxCeleb1-E-Clean EER"
+    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/list_test_all2.txt"
+  - _target_: src.metrics.EERMetric
+    device: ${metrics.device}
+    name: "voxsrc2021_val EER"
+    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/voxsrc2021_val.txt"

@@ -1,8 +1,8 @@
-voxceleb2:
+train:
+  name: "VoxCeleb2"
   _target_: src.datasets.VoxCeleb
-  dir_name: '/home/stefan/Documents/CourseWork/VoxCeleb/TODO'
+  dir_name: '/home/stefan/Documents/CourseWork/VoxCeleb/vox2_dev2/aac'
   instance_transforms: ${transforms.instance_transforms.train}
   sample_rate: 16000
-  max_duration: 40
-  celeb_id: 2
-  extension: '.m4a'
+  max_duration: 15
+  extension: 'm4a'

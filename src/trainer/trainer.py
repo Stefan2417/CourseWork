@@ -1,13 +1,14 @@
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
-
+import torch
+from tqdm import tqdm
 
 class Trainer(BaseTrainer):
     """
     Trainer class. Defines the logic of batch logging and processing.
     """
 
-    def process_batch(self, batch, metrics: MetricTracker):
+    def process_batch(self, batch, metrics : MetricTracker):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -26,35 +27,77 @@ class Trainer(BaseTrainer):
                 the dataloader (possibly transformed via batch transform),
                 model outputs, and losses.
         """
+
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        metric_funcs = self.metrics["inference"]
-
         if self.is_train:
-            metric_funcs = self.metrics["train"]
             self.optimizer.zero_grad()
 
         outputs = self.model(batch)
         batch.update(outputs)
 
-        all_losses = self.criterion(batch)
-        batch.update(all_losses)
-
         if self.is_train:
+            all_losses = self.criterion(batch)
+            batch.update(all_losses)
+
             batch["loss"].backward()  # sum of all losses is always called loss
             self._clip_grad_norm()
             self.optimizer.step()
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
+            for loss_name in self.config.writer.loss_names:
+                # print(f"Batch keys: {batch.keys()}")
+                # print(metrics.keys())
+                # print(batch[loss_name].item())
+                metrics.update(loss_name, batch[loss_name].item())
 
-        # update metrics for each loss (in case of multiple losses)
-        for loss_name in self.config.writer.loss_names:
-            metrics.update(loss_name, batch[loss_name].item())
-
-        for met in metric_funcs:
-            metrics.update(met.name, met(**batch))
+        if not self.is_train:
+            metric_funcs = self.metrics["train_inference"]
+            for met in metric_funcs:
+                met(batch_embeddings=batch)
         return batch
+
+
+
+    def _evaluation_epoch(self, epoch, part, dataloader):
+        """
+        Evaluate model on the partition after training for an epoch.
+
+        Args:
+            epoch (int): current training epoch.
+            part (str): partition to evaluate on
+            dataloader (DataLoader): dataloader for the partition.
+        Returns:
+            logs (dict): logs that contain the information about evaluation.
+        """
+
+        self.is_train = False
+        self.model.eval()
+        self.evaluation_metrics.reset()
+
+        with torch.no_grad():
+            for batch_idx, batch in tqdm(
+                    enumerate(dataloader),
+                    desc=part,
+                    total=len(dataloader),
+            ):
+                batch = self.process_batch(
+                    batch,
+                    metrics=self.evaluation_metrics
+                )
+
+            metric_funcs = self.metrics["train_inference"]
+            for met in metric_funcs:
+                self.evaluation_metrics.update(met.name, met()) #calc EER
+
+            self.writer.set_step(epoch * self.epoch_len, part)
+            self._log_scalars(self.evaluation_metrics)
+            self._log_batch(
+                batch_idx, batch, part
+            )  # log only the last batch during inference
+
+        return self.evaluation_metrics.result()
 
     def _log_batch(self, batch_idx, batch, mode="train"):
         """

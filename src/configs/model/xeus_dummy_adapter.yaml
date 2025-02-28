@@ -1,0 +1,4 @@
+_target_: src.model.XeusASVAdapter
+pretrain: '/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth'
+layers: [10, 11, 12, 13, 14]
+emb_dim: 1024

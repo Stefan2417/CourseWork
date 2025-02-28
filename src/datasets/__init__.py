@@ -1,3 +1,2 @@
-from src.datasets.example import ExampleDataset
-from src.datasets.voxceleb1 import VoxCeleb1
+from src.datasets.voxceleb import VoxCeleb
 

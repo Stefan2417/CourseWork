@@ -1,6 +1,0 @@
-device: "auto"
-inference: # metrics that are calculated during inference (eval)
-  - _target_: src.metrics.EERMetric
-    device: ${metrics.device}
-    name: "EER"
-    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/list_test_hard2.txt"

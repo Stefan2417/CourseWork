@@ -56,7 +56,7 @@ class BaseTrainer:
                 tensor name.
         """
         self.is_train = True
-
+        self.write_pth_counter = 0
         self.config = config
         self.cfg_trainer = self.config.trainer
 
@@ -71,6 +71,9 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
+
+        self.logger.info(f'dataloaders: {dataloaders}')
+
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
@@ -96,6 +99,7 @@ class BaseTrainer:
         self.save_period = (
             self.cfg_trainer.save_period
         )  # checkpoint each save_period epochs
+
         self.monitor = self.cfg_trainer.get(
             "monitor", "off"
         )  # format: "mnt_mode mnt_metric"
@@ -117,6 +121,10 @@ class BaseTrainer:
 
         # define metrics
         self.metrics = metrics
+
+        self.logger.info('self.config.writer.loss_names:')
+        self.logger.info(self.config.writer.loss_names)
+
         self.train_metrics = MetricTracker(
             *self.config.writer.loss_names,
             "grad_norm",
@@ -124,7 +132,6 @@ class BaseTrainer:
             writer=self.writer,
         )
         self.evaluation_metrics = MetricTracker(
-            *self.config.writer.loss_names,
             *[m.name for m in self.metrics["inference"]],
             writer=self.writer,
         )
@@ -202,6 +209,7 @@ class BaseTrainer:
         self.train_metrics.reset()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
+
         for batch_idx, batch in enumerate(
             tqdm(self.train_dataloader, desc="train", total=self.epoch_len)
         ):
@@ -365,7 +373,8 @@ class BaseTrainer:
         """
         # do batch transforms on device
         transform_type = "train" if self.is_train else "inference"
-        transforms = self.batch_transforms.get(transform_type)
+        transforms = None if self.batch_transforms is None else self.batch_transforms.get(transform_type)
+
         if transforms is not None:
             for transform_name in transforms.keys():
                 batch[transform_name] = transforms[transform_name](
@@ -540,6 +549,7 @@ class BaseTrainer:
         Args:
             pretrained_path (str): path to the model state dict.
         """
+
         pretrained_path = str(pretrained_path)
         if hasattr(self, "logger"):  # to support both trainer and inferencer
             self.logger.info(f"Loading model weights from: {pretrained_path} ...")

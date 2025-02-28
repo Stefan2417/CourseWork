@@ -1,7 +1,6 @@
 from itertools import repeat
 
 from hydra.utils import instantiate
-from torch.utils.data import Sampler
 
 from src.datasets.collate import collate_fn
 from src.utils.init_utils import set_worker_seed
@@ -50,36 +49,6 @@ def move_batch_transforms_to_device(batch_transforms, device):
                 transforms[transform_name] = transforms[transform_name].to(device)
 
 
-class DynamicBatchSampler(Sampler):
-    def __init__(self, lengths, max_duration=60, sample_rate=16000):
-        self.max_samples = max_duration * sample_rate
-        self.lengths = lengths
-        self._batches = []  # Хранит предвычисленные батчи
-
-        # Предварительное вычисление батчей при инициализации
-        indices = sorted(range(len(self.lengths)),
-                         key=lambda i: self.lengths[i],
-                         reverse=True)
-        batch = []
-        current_max = 0
-        for idx in indices:
-            new_max = max(current_max, self.lengths[idx])
-            if new_max * (len(batch) + 1) > self.max_samples:
-                self._batches.append(batch)
-                batch = [idx]
-                current_max = self.lengths[idx]
-            else:
-                batch.append(idx)
-                current_max = new_max
-        if batch:
-            self._batches.append(batch)
-
-    def __iter__(self):
-        return iter(self._batches)
-
-    def __len__(self) -> int:
-        return len(self._batches)
-
 
 def get_dataloaders(config, device):
     batch_transforms = instantiate(config.transforms.batch_transforms)
@@ -93,18 +62,17 @@ def get_dataloaders(config, device):
 
         dataset_lengths = [item["length"] for item in dataset]
 
-        dynamic_sampler = DynamicBatchSampler(
+        sampler = instantiate(
+            config.sampler,
             lengths=dataset_lengths,
-            max_duration=dataset.max_samples // dataset.sample_rate,
             sample_rate=dataset.sample_rate
         )
 
         partition_dataloader = instantiate(
             config.dataloader,
             dataset=dataset,
-            batch_sampler=dynamic_sampler,
+            batch_sampler=sampler,
             collate_fn=collate_fn,
-            drop_last=(dataset_partition == "train"),
             worker_init_fn=set_worker_seed
         )
 
@@ -113,7 +81,7 @@ def get_dataloaders(config, device):
     return dataloaders, batch_transforms
 
 
-def parse_dataset_speakers(dir_name, extension='.wav', speaker_level=1):
+def parse_dataset_speakers(dir_name, extension, speaker_level=1):
     if dir_name[-1] != os.sep:
         dir_name += os.sep
 

@@ -60,9 +60,14 @@ def main(config):
 
     # save_path for model predictions
     save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
+
+    already_exists = save_path.exists()
+
     save_path.mkdir(exist_ok=True, parents=True)
 
     metrics = instantiate(config.metrics)
+
+    logger.info(f'saved embeddings already exists: {already_exists}')
 
     inferencer = Inferencer(
         model=model,
@@ -75,8 +80,8 @@ def main(config):
         skip_model_load=False,
     )
 
-
-    inferencer.run_inference()
+    if not already_exists:
+        inferencer.run_inference()
 
     for part in inferencer.evaluation_dataloaders.keys():
         saved_directory_path = save_path / part

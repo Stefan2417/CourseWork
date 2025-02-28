@@ -11,6 +11,7 @@ def collate_fn(dataset_items: list[dict]):
     lengths = torch.LongTensor([item['length'] for item in dataset_items])
     names = [item["name"] for item in dataset_items]
 
+    # logger.info(f'cnt_waveforms: {len(waveforms)}')
     padded_waveforms = pad_sequence(waveforms, batch_first=True)
 
     return {

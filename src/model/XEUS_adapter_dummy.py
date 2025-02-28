@@ -15,32 +15,33 @@ class XeusASVAdapter(nn.Module):
     https://doi.org/10.1186/s13636-019-0166-8
     """
 
-    def __init__(self, pretrain, layers=None, emb_dim=256):
+    def __init__(self, pretrain, layers=None, emb_dim=1024):
         super().__init__()
 
 
         self.xeus, _ = SSLTask.build_model_from_file(None, model_file=pretrain)
-        self.xeus.eval()
+        print(self.xeus)
         for param in self.xeus.parameters():
             param.requires_grad_(False)
 
 
         self.selected_layers = layers
-        self.num_blocks = self.num_blocks
-        
+        self.num_blocks = len(self.selected_layers)
+        self.output_xeus_emb_sz = 1024
+
         self.layer_norm = nn.LayerNorm(
-            self.xeus.encoder._output_size * self.num_blocks
+            self.output_xeus_emb_sz * self.num_blocks
         )
 
         # Attentive Statistics Pooling
         self.asp = AttentiveStatisticsPooling(
-            channels=self.xeus.encoder._output_size * self.num_blocks
+            channels=self.output_xeus_emb_sz * self.num_blocks
         )
 
         # Проекционная голова
         self.head = nn.Sequential(
-            nn.BatchNorm1d(self.xeus.encoder._output_size * self.num_blocks * 2),
-            nn.Linear(self.xeus.encoder._output_size * self.num_blocks * 2, emb_dim)
+            nn.LayerNorm(self.output_xeus_emb_sz * self.num_blocks * 2),
+            nn.Linear(self.output_xeus_emb_sz * self.num_blocks * 2, emb_dim)
         )
 
     def forward(self, batch):
@@ -56,9 +57,7 @@ class XeusASVAdapter(nn.Module):
 
         concatenated = torch.cat(selected_features, dim=-1)  # [batch, time, dim*N]
 
-
         normalized = self.layer_norm(concatenated)
-
 
         asp_input = normalized.permute(0, 2, 1)
 

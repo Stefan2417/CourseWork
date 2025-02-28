@@ -39,8 +39,14 @@ class WandBWriter:
         """
         try:
             import wandb
+            import os
 
-            wandb.login()
+            api_key = os.getenv("WANDB_API_KEY")
+
+            if api_key:
+                wandb.login(key=api_key)
+            else:
+                logger.error("WANDB_API_KEY не найден! Установите API-ключ перед запуском.")
 
             self.run_id = run_id
 

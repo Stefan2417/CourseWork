@@ -1,13 +1,13 @@
 defaults:
-  - model: xeus_baseline
+  - model: xeus_dummy_adapter
   - datasets: VoxCeleb1 # we do not want to run inference on training data
-  - dataloader: VoxCeleb1
+  - dataloader: VoxCeleb
   - transforms: example
-  - metrics: base
+  - metrics: voxceleb_metrics
   - _self_
 inferencer:
   device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
-  save_path: "save_embeddings" # any name here, can be a dataset name
+  save_path: "save_embeddings_ecapa" # any name here, can be a dataset name
   seed: 1
   from_pretrained: "/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth" # path to the pretrained model

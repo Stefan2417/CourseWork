@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import math
 
 
 class AAMSoftmaxLoss(nn.Module):
@@ -23,12 +24,16 @@ class AAMSoftmaxLoss(nn.Module):
         self.weight = nn.Parameter(torch.Tensor(num_classes, embed_dim), requires_grad=True)
         nn.init.xavier_normal_(self.weight, gain=1)
 
-        self.cos_m = torch.cos(margin)
-        self.sin_m = torch.sin(margin)
-        self.threshold = torch.cos(torch.pi - margin)
-        self.mm = torch.sin(torch.pi - margin) * margin
+        self.cos_m = math.cos(margin)
+        self.sin_m = math.sin(margin)
+        self.threshold = math.cos(math.pi - margin)
+        self.mm = math.sin(math.pi - margin) * margin
 
-    def forward(self, embeddings: torch.Tensor, labels: torch.Tensor) -> dict:
+    def forward(self, batch) -> dict:
+
+        embeddings = batch['embeddings']
+        labels = batch['labels']
+
         embeddings_norm = F.normalize(embeddings, p=2, dim=1)
         weights_norm = F.normalize(self.weight, p=2, dim=1)
 
@@ -44,7 +49,7 @@ class AAMSoftmaxLoss(nn.Module):
         logits = torch.where(one_hot.bool(), phi, cos_theta)
         logits *= self.scale
 
-        loss = F.cross_entropy(logits, labels)
+        loss = F.cross_entropy(logits, labels, reduction='mean')
 
         with torch.no_grad():
             acc = (logits.argmax(1) == labels).float().mean()

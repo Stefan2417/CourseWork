@@ -1,38 +1,34 @@
+import logging
+
+import torch
 from torch import nn
-from espnet2.bin.spk_inference import SpeakerEmbedding
+from speechbrain.inference.speaker import EncoderClassifier
 
+logger = logging.getLogger(__name__)
 
-
-class ECAPA_TDNN(nn.Module):
+class EmbedderRawNet(nn.Module):
     """
-    Xeus-based audio embedding extractor with temporal pooling
     """
 
-    def __init__(self, pretrain):
-        """
-        Args:
-            xeus_model (nn.Module): pretrained Xeus model
-            pool_method (str): temporal pooling method (mean/max)
-        """
+    def __init__(self, sample_rate=16000):
         super().__init__()
-        self.embedder = SpeakerEmbedding(
-            model_tag="ecapa_tdnn",
+        self.sample_rate = sample_rate
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+        self.model = EncoderClassifier.from_hparams(
+            source="yangwang825/ecapa-tdnn-vox2",
+            savedir="pretrained/ecapa_vox2",
+            run_opts={"device": self.device}
         )
-        self.embedder.eval()
 
-    def forward(self, batch):
-        """
 
-        """
-        data_object = batch['data_object']
-        lengths = batch['lengths']
-        # Feature extraction
+    def forward(self, batch: dict) -> torch.Tensor:
+        waveforms = batch['data_object']
 
-        feats = self.embedder(data_object, lengths)
+        lengths = batch['lengths'].float()
+        lengths /= lengths.max()
 
-        return {"embeddings": feats}
+        embeddings = self.model.encode_batch(wavs=waveforms, wav_lens=lengths)
 
-    def __str__(self):
-        """Информация о модели"""
-        return ""
+        return {'embeddings' : embeddings.squeeze(1)}
 

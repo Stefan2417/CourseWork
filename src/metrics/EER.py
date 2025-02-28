@@ -19,6 +19,7 @@ class EERMetric(BaseMetric):
                  device: torch.device):
         super().__init__(name=name)
         self.pairs = self._load_pairs(Path(pairs_path))
+        self.can_cached = 0
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
@@ -35,30 +36,46 @@ class EERMetric(BaseMetric):
                     pairs.append((int(label), path1, path2))
         return pairs
 
-    def _cache_embeddings(self, directory) -> None:
+    def _cache_embeddings(self, directory=None, **kwargs) -> None:
         """Предварительное вычисление эмбеддингов для всего датасета"""
-        for filename in os.listdir(directory):
-            if filename.endswith(".pth"):
-                file_path = os.path.join(directory, filename)
-                try:
-                    data = torch.load(file_path)
-                    key = data['name']  # Используем имя файла без расширения как ключ
-                    embedding = torch.nn.functional.normalize(data['embedding'], p=2, dim=0)
-                    self.embeddings_cache[key] = embedding
-                except Exception as e:
-                    logger.info(f"Ошибка при загрузке {filename}: {e}")
+
+        if 'batch_embeddings' in kwargs:
+            batch = kwargs['batch_embeddings']
+            batch_size = batch["embeddings"].shape[0]
+            for i in range(batch_size):
+                self.can_cached += 1
+                # clone because of
+                # https://github.com/pytorch/pytorch/issues/1995
+                embedding = batch["embeddings"][i].clone()
+                name = batch["names"][i]
+                embedding = torch.nn.functional.normalize(embedding, p=2, dim=0)
+                self.embeddings_cache[name] = embedding
+        else:
+            for filename in os.listdir(directory):
+                if filename.endswith(".pth"):
+                    file_path = os.path.join(directory, filename)
+                    try:
+                        data = torch.load(file_path)
+                        key = data['name']  # Используем имя файла без расширения как ключ
+                        embedding = torch.nn.functional.normalize(data['embedding'], p=2, dim=0)
+                        self.embeddings_cache[key] = embedding
+                    except Exception as e:
+                        logger.info(f"Ошибка при загрузке {filename}: {e}")
 
 
-    def __call__(self, directory, **kwargs) -> float:
+    def __call__(self, directory=None, **kwargs) -> float:
         """
         Основной интерфейс вычисления метрики
 
         Args:
         """
 
-        if len(self.embeddings_cache) == 0:
-            self._cache_embeddings(directory)
-        logger.info(f'NUMBER OF CACHED EMBEDDINGS: {len(self.embeddings_cache)}')
+        if len(self.embeddings_cache) == 0 or 'batch_embeddings' in kwargs:
+            self._cache_embeddings(directory, **kwargs)
+
+        if 'batch_embeddings' in kwargs:
+            return -1
+
         similarities, labels = [], []
         for label, name1, name2 in self.pairs:
             emb1 = self.embeddings_cache.get(name1)

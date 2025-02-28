@@ -1,29 +1,34 @@
 defaults:
-  - model: XeusASVAdapter
+  - model: xeus_dummy_adapter
   - writer: wandb
-  - metrics: base
-  - datasets: VoxCeleb2
-  - dataloader: VoxCeleb2
-  - transforms: example
+  - metrics: voxceleb_metrics
+  - datasets:
+    - VoxCeleb2
+    - VoxCeleb1_test
+  - dataloader: VoxCeleb
+  - sampler: dynamic_sampler
+  - transforms: example_only_batch
   - _self_
 optimizer:
   _target_: torch.optim.Adam
-  lr: 3e-4
+  lr: 0.001
+  weight_decay: 0.000001
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.StepLR
-  gamma: 0.9
-  step_size: ${trainer.epoch_len}
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  eta_min: 1e-6
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
+  embed_dim: 1024
+  num_classes: 2108
 trainer:
   log_step: 1
-  n_epochs: 5
+  n_epochs: 10
   device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
-  override: False # if True, will override the previous run with the same name
+  override: True # if True, will override the previous run with the same name
   monitor: "off" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
   save_period: 1 # checkpoint each save_period epochs in addition to the best epoch
   early_stop: ${trainer.n_epochs} # epochs for early stopping
-  save_dir: "saved"
+  save_dir: "data/saved"
   seed: 1
