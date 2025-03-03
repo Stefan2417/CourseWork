@@ -3,9 +3,13 @@ train: []
 train_inference:
   - _target_: src.metrics.EERMetric
     device: ${metrics.device}
-    name: "VoxCeleb1-Clean EER"
-    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/veri_test2.txt"
+    name: "VoxCeleb1-O EER"
+    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/veri_test.txt"
 inference: # metrics that are calculated during inference (eval)
+  - _target_: src.metrics.EERMetric
+    device: ${metrics.device}
+    name: "VoxCeleb1-O EER"
+    pairs_path: "/home/stefan/Documents/CourseWork/VoxCeleb/data/trials/veri_test.txt"
   - _target_: src.metrics.EERMetric
     device: ${metrics.device}
     name: "VoxCeleb1-Clean EER"

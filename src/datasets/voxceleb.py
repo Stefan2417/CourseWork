@@ -23,10 +23,10 @@ class VoxCeleb(BaseDataset):
             name,
             dir_name,
             sample_rate,
-            max_duration,
             extension,
             limit=None,
             shuffle_index=False,
+            *args,
             **kwargs
     ):
         index_path = ROOT_PATH / "data" / name / "index.json"
@@ -34,7 +34,6 @@ class VoxCeleb(BaseDataset):
         self.extension = extension
         self.dir_name = dir_name
         self.sample_rate = sample_rate
-        self.max_samples = max_duration * sample_rate
         self.give_label = {}
         self.cnt_labels = 0
 
@@ -43,7 +42,7 @@ class VoxCeleb(BaseDataset):
         else:
             index = self._create_index()
 
-        super().__init__(index, limit, shuffle_index, **kwargs)
+        super().__init__(index, limit, shuffle_index, *args, **kwargs)
 
     def _create_index(self):
         """
@@ -119,16 +118,7 @@ class VoxCeleb(BaseDataset):
 
     def load_object(self, path):
         waveform, sr = torchaudio.load(path, format=self.extension)
-        # if sr != self.sample_rate:
-        #     waveform = resample(waveform, orig_sr=sr, target_sr=16000)
-        #     sr = 16000
         assert sr == self.sample_rate
-        if waveform.size(1) > self.max_samples:
-            waveform = waveform[:, :self.max_samples]
-
-        waveform = waveform[0] # TODO case multi-channel
-        # eps = 1e-7
-        # waveform = (waveform - waveform.mean()) / (waveform.std() + eps)
         return torch.Tensor(waveform)
 
     def preprocess_data(self, instance_data):

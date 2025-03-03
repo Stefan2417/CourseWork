@@ -1,4 +1,6 @@
 mkdir -p VoxCeleb/data/trials
+# VoxCeleb1-O
+wget -P VoxCeleb/data/trials https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test.txt
 # VoxCeleb1-Clean
 wget -P VoxCeleb/data/trials https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt
 # VoxCeleb1-H-Clean

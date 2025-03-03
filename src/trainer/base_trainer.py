@@ -131,8 +131,13 @@ class BaseTrainer:
             *[m.name for m in self.metrics["train"]],
             writer=self.writer,
         )
+        # self.evaluation_metrics = MetricTracker(
+        #     *[m.name for m in self.metrics["inference"]],
+        #     writer=self.writer,
+        # )
+
         self.evaluation_metrics = MetricTracker(
-            *[m.name for m in self.metrics["inference"]],
+            *[m.name for m in self.metrics["train_inference"]],
             writer=self.writer,
         )
 
@@ -209,6 +214,8 @@ class BaseTrainer:
         self.train_metrics.reset()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
+        self.train_dataloader.batch_sampler.set_epoch(epoch)
+        self.epoch_len = len(self.train_dataloader)
 
         for batch_idx, batch in enumerate(
             tqdm(self.train_dataloader, desc="train", total=self.epoch_len)
@@ -231,11 +238,11 @@ class BaseTrainer:
             # log current results
             if batch_idx % self.log_step == 0:
                 self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
-                self.logger.debug(
-                    "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["loss"].item()
-                    )
-                )
+                # self.logger.debug(
+                #     "Train Epoch: {} {} Loss: {:.6f}".format(
+                #         epoch, self._progress(batch_idx), batch["loss"].item()
+                #     )
+                # )
                 self.writer.add_scalar(
                     "learning rate", self.lr_scheduler.get_last_lr()[0]
                 )
@@ -249,7 +256,8 @@ class BaseTrainer:
                 break
 
         logs = last_train_metrics
-
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.step()
         # Run val/test
         for part, dataloader in self.evaluation_dataloaders.items():
             val_logs = self._evaluation_epoch(epoch, part, dataloader)

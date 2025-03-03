@@ -51,14 +51,11 @@ class AAMSoftmaxLoss(nn.Module):
 
         loss = F.cross_entropy(logits, labels, reduction='mean')
 
-        with torch.no_grad():
-            acc = (logits.argmax(1) == labels).float().mean()
-            pos_cos = cos_theta[one_hot.bool()].mean()
-            neg_cos = cos_theta[~one_hot.bool()].mean()
+        # with torch.no_grad():
+        #     acc = (logits.argmax(1) == labels).float().mean()
+        #     pos_cos = cos_theta[one_hot.bool()].mean()
+        #     neg_cos = cos_theta[~one_hot.bool()].mean()
 
         return {
-            "loss": loss,
-            "accuracy": acc,
-            "pos_cosine": pos_cos,
-            "neg_cosine": neg_cos
+            "loss": loss
         }

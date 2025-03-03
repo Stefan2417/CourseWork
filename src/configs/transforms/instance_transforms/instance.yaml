@@ -1,0 +1,19 @@
+train:
+  data_object: # name of the tensor on which we apply transform
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.AudioNormalize
+        normalize_type: 'per_sample'
+      - _target_: src.transforms.RandomCrop1D
+        max_length: 4
+        sample_rate: 16000
+
+inference:
+  data_object: # name of the tensor on which we apply transform
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.AudioNormalize
+        normalize_type: 'per_sample'
+      - _target_: src.transforms.RandomCrop1D
+        max_length: 4
+        sample_rate: 16000

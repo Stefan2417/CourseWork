@@ -23,7 +23,7 @@ def main(config):
     Args:
         config (DictConfig): hydra experiment config.
     """
-    os.environ["WANDB_API_KEY"] = "" #TODO - delete token
+    os.environ["WANDB_API_KEY"] = "8dd6bf64e54bcd000df67566620fe0a54f6ce31a" #TODO - delete token
     set_random_seed(config.trainer.seed)
 
     project_config = OmegaConf.to_container(config)
@@ -38,9 +38,6 @@ def main(config):
     # setup data_loader instances
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
-    epoch_len = max(len(dl) for name, dl in dataloaders.items() if "train" in name)
-    logger.info(f"EPOCH_LEN: {epoch_len}")
-
     # build model architecture, then print to console
     model = instantiate(config.model).to(device)
     # logger.info(model)
@@ -52,11 +49,12 @@ def main(config):
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer, T_max=epoch_len * config.trainer.get("n_epochs")) #TODO epoch_len
+    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer) #TODO epoch_len
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
     # epoch_len = config.trainer.get("epoch_len")
+    epoch_len = None
 
     trainer = Trainer(
         model=model,
@@ -67,7 +65,7 @@ def main(config):
         config=config,
         device=device,
         dataloaders=dataloaders,
-        epoch_len=None,
+        epoch_len=epoch_len,
         logger=logger,
         writer=writer,
         batch_transforms=None,
