@@ -124,7 +124,7 @@ speechbrain==1.0.2
 sympy==1.13.1
 threadpoolctl==3.5.0
 tomli==2.2.1
-torch==2.4.0+cu118
+torch==2.4.0
 torch-complex==0.4.4
 torchaudio==2.4.0
 torchvision==0.19.0
