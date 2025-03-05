@@ -2,7 +2,7 @@ defaults:
   - model: xeus_dummy_adapter
   - datasets: VoxCeleb1 # we do not want to run inference on training data
   - dataloader: VoxCeleb
-  - transforms: example
+  - transforms: transforms_v1
   - metrics: voxceleb_metrics
   - _self_
 inferencer:
