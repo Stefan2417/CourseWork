@@ -46,10 +46,18 @@ def main(config):
     loss_function = instantiate(config.loss_function).to(device)
     metrics = instantiate(config.metrics)
 
+    total_length = 0
+    logger.info(dataloaders.keys())
+    for i in range(1, config.trainer.get("n_epochs") + 1):
+        dataloaders['train'].batch_sampler.set_epoch(i)
+        total_length += len(dataloaders['train'])
+
+    logger.info(f'total_length: {total_length}')
+
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer) #TODO epoch_len
+    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer, T_max=total_length) #TODO epoch_len
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training

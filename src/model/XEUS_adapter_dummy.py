@@ -17,9 +17,6 @@ class XeusASVAdapter(nn.Module):
 
     def __init__(self, pretrain, emb_dim, layers=None):
         super().__init__()
-
-        import torch
-
         # Loading xeus model with flash attention configuration
         self.xeus, _ = SSLTask.build_model_from_file(
             None,

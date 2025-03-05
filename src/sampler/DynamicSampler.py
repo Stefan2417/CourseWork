@@ -3,6 +3,10 @@ import logging
 from torch.utils.data import Sampler
 import random
 import torch
+import torch.nn as nn
+import random
+import math
+from speechbrain.inference.VAD import VAD
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +54,7 @@ class DynamicBatchSampler(Sampler):
         self.shuffle = shuffle
         self.seed = seed
         self.epoch = 0
-        self.length_cache = {}  # Кеш для хранения длин по эпохам
+        self.length_cache = {}
 
     def __iter__(self):
 
@@ -61,11 +65,16 @@ class DynamicBatchSampler(Sampler):
             indices = torch.randperm(len(indices), generator=g).tolist()
         else:
             indices = sorted(indices, key=lambda x: self.lengths[x], reverse=True)
+
         batch = []
         current_max = 0
         for idx in indices:
             new_max = max(current_max, self.lengths[idx])
             if new_max * (len(batch) + 1) > self.max_samples:
+                # lns = [self.lengths[i] for i in batch]
+                # logger.info(f'give_batch with lens: {lns}')
+                # logger.info(f'max_sample_rate = {self.max_samples}   {self.max_samples // 16000}')
+                # logger.info(f'batch_size= {len(batch)}')
                 yield batch
                 batch = [idx]
                 current_max = self.lengths[idx]
@@ -73,6 +82,7 @@ class DynamicBatchSampler(Sampler):
                 batch.append(idx)
                 current_max = new_max
         if batch:
+
             yield batch
 
     def _compute_length(self):
@@ -86,20 +96,20 @@ class DynamicBatchSampler(Sampler):
         else:
             indices = sorted(indices, key=lambda x: self.lengths[x], reverse=True)
         batch_count = 0
-        batch = []
         current_max = 0
+        cur_len = 0
 
         for idx in indices:
             new_max = max(current_max, self.lengths[idx])
-            if new_max * (len(batch) + 1) > self.max_samples:
+            if new_max * (cur_len + 1) > self.max_samples:
                 batch_count += 1
-                batch = [idx]
+                cur_len = 1
                 current_max = self.lengths[idx]
             else:
-                batch.append(idx)
+                cur_len += 1
                 current_max = new_max
 
-        if batch:
+        if cur_len > 0:
             batch_count += 1
 
         return batch_count

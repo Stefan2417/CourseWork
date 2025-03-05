@@ -14,18 +14,17 @@ optimizer:
   lr: 0.001
   weight_decay: 0.000001
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.StepLR
-  step_size: 1
-  gamma: 0.95
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  eta_min: 0.0007
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
-  embed_dim: 512
+  embed_dim: 1024
   num_classes: 5994
 trainer:
-  log_step: 1
-  n_epochs: 10
+  log_step: 1000
+  n_epochs: 5
   device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
-  resume_from: '/home/stefan/Documents/CourseWork/data/saved/training_all_vox2_v2/checkpoint-epoch3.pth' # null or path to the checkpoint dir with *.pth and config.yaml
+  resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
   override: True # if True, will override the previous run with the same name
   monitor: "off" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric

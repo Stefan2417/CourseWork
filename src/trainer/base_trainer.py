@@ -65,6 +65,7 @@ class BaseTrainer:
 
         self.logger = logger
         self.log_step = config.trainer.get("log_step", 50)
+        self.cur_step = 0
 
         self.model = model
         self.criterion = criterion
@@ -212,7 +213,10 @@ class BaseTrainer:
         self.is_train = True
         self.model.train()
         self.train_metrics.reset()
-        self.writer.set_step((epoch - 1) * self.epoch_len)
+
+        self.writer.set_step(self.cur_step)
+
+
         self.writer.add_scalar("epoch", epoch)
         self.train_dataloader.batch_sampler.set_epoch(epoch)
         self.epoch_len = len(self.train_dataloader)
@@ -225,6 +229,7 @@ class BaseTrainer:
                     batch,
                     metrics=self.train_metrics,
                 )
+                self.cur_step += 1
             except torch.cuda.OutOfMemoryError as e:
                 if self.skip_oom:
                     self.logger.warning("OOM on batch. Skipping batch.")
@@ -237,7 +242,7 @@ class BaseTrainer:
 
             # log current results
             if batch_idx % self.log_step == 0:
-                self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
+                self.writer.set_step(self.cur_step)
                 # self.logger.debug(
                 #     "Train Epoch: {} {} Loss: {:.6f}".format(
                 #         epoch, self._progress(batch_idx), batch["loss"].item()
@@ -256,8 +261,6 @@ class BaseTrainer:
                 break
 
         logs = last_train_metrics
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.step()
         # Run val/test
         for part, dataloader in self.evaluation_dataloaders.items():
             val_logs = self._evaluation_epoch(epoch, part, dataloader)
@@ -289,7 +292,7 @@ class BaseTrainer:
                     batch,
                     metrics=self.evaluation_metrics,
                 )
-            self.writer.set_step(epoch * self.epoch_len, part)
+            self.writer.set_step(self.cur_step, part)
             self._log_scalars(self.evaluation_metrics)
             self._log_batch(
                 batch_idx, batch, part

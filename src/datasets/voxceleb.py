@@ -79,7 +79,6 @@ class VoxCeleb(BaseDataset):
                 label = self.give_label[label]
 
                 index.append({'label' : label, 'path' : path, 'name' : suffix})
-
         write_json(index, str(index_path / "index.json"))
         return index
 

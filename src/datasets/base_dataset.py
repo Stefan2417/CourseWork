@@ -185,5 +185,5 @@ class BaseDataset(Dataset):
             random.shuffle(index)
 
         if limit is not None:
-            index = index[:limit]
+            index = list(filter(lambda x: x['label'] < limit, index))
         return index

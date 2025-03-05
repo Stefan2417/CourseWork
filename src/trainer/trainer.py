@@ -44,6 +44,8 @@ class Trainer(BaseTrainer):
             batch["loss"].backward()  # sum of all losses is always called loss
             self._clip_grad_norm()
             self.optimizer.step()
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
             for loss_name in self.config.writer.loss_names:
                 # print(f"Batch keys: {batch.keys()}")
                 # print(metrics.keys())
@@ -89,7 +91,7 @@ class Trainer(BaseTrainer):
             for met in metric_funcs:
                 self.evaluation_metrics.update(met.name, met()) #calc EER
 
-            self.writer.set_step(epoch * self.epoch_len, part)
+            self.writer.set_step(self.cur_step, part)
             self._log_scalars(self.evaluation_metrics)
             self._log_batch(
                 batch_idx, batch, part
@@ -114,8 +116,9 @@ class Trainer(BaseTrainer):
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
-            # Log Stuff
-            pass
+            # if batch_idx % 5000 == 0:
+            self.writer.add_audio(audio_name='audio_sample_train', audio= batch['data_object'][0], sample_rate=self.config.writer.sample_rate)
         else:
             # Log Stuff
-            pass
+            self.writer.add_audio(audio_name='audio_sample_eval', audio=batch['data_object'][0],
+                                  sample_rate=self.config.writer.sample_rate)
