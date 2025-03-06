@@ -61,15 +61,12 @@ class AudioNormalize(nn.Module):
         Returns:
             x (Tensor): Mono normalized audio tensor [time]
         """
-        # Check if input is multi-channel
         if x.dim() == 2:
-            # Convert to mono by averaging channels if needed
             if x.size(0) > 1:
-                x = x.mean(dim=0)  # Average across channels -> [time]
+                x = x.mean(dim=0)
             else:
-                x = x.squeeze(0)  # Remove channel dimension if only one channel -> [time]
+                x = x.squeeze(0)
         elif x.dim() == 1:
-            # Already mono [time], no need to change
             pass
         else:
             raise ValueError(f"Unexpected input dimension: {x.dim()}, expected 1D or 2D tensor")

@@ -6,13 +6,11 @@ import math
 
 class AAMSoftmaxLoss(nn.Module):
     """
-    Оптимизированная реализация AAM-Softmax (ArcFace) с улучшенной численной стабильностью и метриками.
-
-    Параметры:
-        embed_dim (int): Размер эмбеддингов
-        num_classes (int): Количество классов
-        scale (float): Масштаб logits (по умолчанию 30.0)
-        margin (float): Угловая маржа в радианах (по умолчанию 0.4)
+    args:
+        embed_dim (int):
+        num_classes (int):
+        scale (float):
+        margin (float):
     """
 
     def __init__(self, embed_dim: int, num_classes: int, scale: float = 32.0, margin: float = 0.2):

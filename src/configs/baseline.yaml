@@ -15,14 +15,14 @@ optimizer:
   weight_decay: 0.000001
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  eta_min: 0.0007
+  eta_min: 0.0001
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
   embed_dim: 1024
-  num_classes: 5994
+  num_classes: 1000
 trainer:
   log_step: 1000
-  n_epochs: 5
+  n_epochs: 10
   device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"

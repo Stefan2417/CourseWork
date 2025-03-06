@@ -37,12 +37,10 @@ class XeusASVAdapter(nn.Module):
             self.output_xeus_emb_sz * self.num_blocks
         )
 
-        # Attentive Statistics Pooling
         self.asp = AttentiveStatisticsPooling(
             channels=self.output_xeus_emb_sz * self.num_blocks
         )
 
-        # Проекционная голова
         self.head = nn.Sequential(
             nn.LayerNorm(self.output_xeus_emb_sz * self.num_blocks * 2),
             nn.Linear(self.output_xeus_emb_sz * self.num_blocks * 2, emb_dim)

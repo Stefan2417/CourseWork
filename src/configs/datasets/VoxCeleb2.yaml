@@ -5,4 +5,4 @@ train:
   instance_transforms: ${transforms.instance_transforms.train}
   sample_rate: 16000
   extension: 'm4a'
-  limit: 5994
+  limit: 1000
