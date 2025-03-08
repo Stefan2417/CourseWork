@@ -15,6 +15,7 @@ class VoxCeleb(BaseDataset):
             name,
             dir_name,
             sample_rate,
+            extension,
             limit=None,
             shuffle_index=False,
             *args,
@@ -23,6 +24,7 @@ class VoxCeleb(BaseDataset):
         index_path = ROOT_PATH / "data" / name / "index.json"
         self.name = name
         self.dir_name = dir_name
+        self.extension = extension
         self.sample_rate = sample_rate
         self.give_label = {}
         self.cnt_labels = 0

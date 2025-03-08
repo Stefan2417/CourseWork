@@ -39,6 +39,7 @@ def main(config):
 
     # setup data_loader instances
     # batch_transforms should be put on device
+    logger.info('run get_dataloaders')
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
     logger.info('instantiate dataloaders and batch_transforms')
