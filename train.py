@@ -3,6 +3,8 @@ import warnings
 import hydra
 import torch
 import os
+
+from comet_ml.file_uploader import total_len
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -38,6 +40,8 @@ def main(config):
     # setup data_loader instances
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
+
+    logger.info('instantiate dataloaders and batch_transforms')
     # build model architecture, then print to console
     model = instantiate(config.model).to(device)
     # logger.info(model)
@@ -46,12 +50,8 @@ def main(config):
     loss_function = instantiate(config.loss_function).to(device)
     metrics = instantiate(config.metrics)
 
-    total_length = 0
+    total_length = len(dataloaders['train']) * config.trainer.n_epochs
     logger.info(dataloaders.keys())
-    for i in range(1, config.trainer.get("n_epochs") + 1):
-        dataloaders['train'].batch_sampler.set_epoch(i)
-        total_length += len(dataloaders['train'])
-
     logger.info(f'total_length: {total_length}')
 
     # build optimizer, learning rate scheduler
@@ -76,7 +76,7 @@ def main(config):
         epoch_len=epoch_len,
         logger=logger,
         writer=writer,
-        batch_transforms=None,
+        batch_transforms=batch_transforms,
         skip_oom=config.trainer.get("skip_oom", True),
     )
 

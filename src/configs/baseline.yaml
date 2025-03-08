@@ -6,7 +6,6 @@ defaults:
     - VoxCeleb2
     - VoxCeleb1_test
   - dataloader: VoxCeleb
-  - sampler: dynamic_sampler
   - transforms: transforms_v1
   - _self_
 optimizer:
@@ -19,11 +18,12 @@ lr_scheduler:
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
   embed_dim: 1024
-  num_classes: 1000
+  num_classes: 3000
 trainer:
-  log_step: 1000
+  log_step: 100
+  log_audio: False
   n_epochs: 10
-  device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
+  device_tensors: ["data_object", "labels", "lengths"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
   override: True # if True, will override the previous run with the same name

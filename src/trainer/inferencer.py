@@ -65,9 +65,9 @@ class Inferencer(BaseTrainer):
         self.save_path = save_path
         self.write_pth_counter = 0
 
-        # if not skip_model_load: #TODO
+        if not skip_model_load: #TODO
         # init model
-        # self._from_pretrained(config.inferencer.get("from_pretrained"))
+            self._from_pretrained(config.inferencer.get("from_pretrained"))
 
     def run_inference(self):
         """

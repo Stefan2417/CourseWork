@@ -3,12 +3,13 @@ from src.trainer.base_trainer import BaseTrainer
 import torch
 from tqdm import tqdm
 
+
 class Trainer(BaseTrainer):
     """
     Trainer class. Defines the logic of batch logging and processing.
     """
 
-    def process_batch(self, batch, metrics : MetricTracker):
+    def process_batch(self, batch, metrics: MetricTracker):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -27,7 +28,6 @@ class Trainer(BaseTrainer):
                 the dataloader (possibly transformed via batch transform),
                 model outputs, and losses.
         """
-
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
@@ -47,9 +47,6 @@ class Trainer(BaseTrainer):
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
             for loss_name in self.config.writer.loss_names:
-                # print(f"Batch keys: {batch.keys()}")
-                # print(metrics.keys())
-                # print(batch[loss_name].item())
                 metrics.update(loss_name, batch[loss_name].item())
 
         if not self.is_train:
@@ -57,8 +54,6 @@ class Trainer(BaseTrainer):
             for met in metric_funcs:
                 met(batch_embeddings=batch)
         return batch
-
-
 
     def _evaluation_epoch(self, epoch, part, dataloader):
         """
@@ -75,6 +70,7 @@ class Trainer(BaseTrainer):
         self.is_train = False
         self.model.eval()
         self.evaluation_metrics.reset()
+        torch.cuda.empty_cache()
 
         with torch.no_grad():
             for batch_idx, batch in tqdm(
@@ -89,7 +85,7 @@ class Trainer(BaseTrainer):
 
             metric_funcs = self.metrics["train_inference"]
             for met in metric_funcs:
-                self.evaluation_metrics.update(met.name, met()) #calc EER
+                self.evaluation_metrics.update(met.name, met())  # calc EER
 
             self.writer.set_step(self.cur_step, part)
             self._log_scalars(self.evaluation_metrics)
@@ -116,9 +112,11 @@ class Trainer(BaseTrainer):
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
-            # if batch_idx % 5000 == 0:
-            self.writer.add_audio(audio_name='audio_sample_train', audio= batch['data_object'][0], sample_rate=self.config.writer.sample_rate)
+            if self.log_audio:
+                self.writer.add_audio(audio_name='audio_sample_train', audio=batch['data_object'][0],
+                                      sample_rate=self.config.writer.sample_rate)
         else:
             # Log Stuff
-            self.writer.add_audio(audio_name='audio_sample_eval', audio=batch['data_object'][0],
-                                  sample_rate=self.config.writer.sample_rate)
+            if self.log_audio:
+                self.writer.add_audio(audio_name='audio_sample_eval', audio=batch['data_object'][0],
+                                      sample_rate=self.config.writer.sample_rate)

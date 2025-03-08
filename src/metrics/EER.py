@@ -11,7 +11,6 @@ from src.metrics.base_metric import BaseMetric
 logger = logging.getLogger(__name__)
 
 class EERMetric(BaseMetric):
-    """Вычисление Equal Error Rate для предопределённых пар аудио"""
 
     def __init__(self,
                  name: str,
@@ -26,7 +25,6 @@ class EERMetric(BaseMetric):
         self.embeddings_cache: Dict[str, torch.Tensor] = {}
 
     def _load_pairs(self, path: Path) -> List[Tuple[int, str, str]]:
-        """Парсинг файла с парами аудио"""
         pairs = []
         with open(path, 'r') as f:
             for line in f:
@@ -37,8 +35,6 @@ class EERMetric(BaseMetric):
         return pairs
 
     def _cache_embeddings(self, directory=None, **kwargs) -> None:
-        """Предварительное вычисление эмбеддингов для всего датасета"""
-
         if 'batch_embeddings' in kwargs:
             batch = kwargs['batch_embeddings']
             batch_size = batch["embeddings"].shape[0]
@@ -65,8 +61,6 @@ class EERMetric(BaseMetric):
 
     def __call__(self, directory=None, **kwargs) -> float:
         """
-        Основной интерфейс вычисления метрики
-
         Args:
         """
 
@@ -105,14 +99,13 @@ class EERMetric(BaseMetric):
         eer_idx = np.nanargmin(np.abs(fpr - fnr))
         eer = (fpr[eer_idx] + fnr[eer_idx]) / 2
 
-        plt.hist([s for s, l in zip(similarities, labels) if l == 1], alpha=0.5, label='Genuine')
-        plt.hist([s for s, l in zip(similarities, labels) if l == 0], alpha=0.5, label='Impostor')
-        plt.legend()
-        plt.savefig("eer_distribution.png")  # Сохранит в рабочую директорию
-        plt.close()  # Освободит память
+        # plt.hist([s for s, l in zip(similarities, labels) if l == 1], alpha=0.5, label='Genuine')
+        # plt.hist([s for s, l in zip(similarities, labels) if l == 0], alpha=0.5, label='Impostor')
+        # plt.legend()
+        # plt.savefig("eer_distribution.png")  # Сохранит в рабочую директорию
+        # plt.close()  # Освободит память
 
         return eer
 
     def reset(self):
-        """Сброс кэша для переиспользования метрики"""
         self.embeddings_cache.clear()

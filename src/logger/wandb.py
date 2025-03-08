@@ -94,6 +94,9 @@ class WandBWriter:
             )
             self.timer = datetime.now()
 
+    def get_step(self):
+        return self.step
+
     def _object_name(self, object_name):
         """
         Update object_name (scalar, image, etc.) with the

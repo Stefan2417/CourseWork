@@ -60,6 +60,7 @@ class BaseTrainer:
         self.config = config
         self.cfg_trainer = self.config.trainer
 
+        self.log_audio = config.trainer.get("log_audio", False)
         self.device = device
         self.skip_oom = skip_oom
 
@@ -213,12 +214,12 @@ class BaseTrainer:
         self.is_train = True
         self.model.train()
         self.train_metrics.reset()
+        torch.cuda.empty_cache()
 
         self.writer.set_step(self.cur_step)
 
 
         self.writer.add_scalar("epoch", epoch)
-        self.train_dataloader.batch_sampler.set_epoch(epoch)
         self.epoch_len = len(self.train_dataloader)
 
         for batch_idx, batch in enumerate(
@@ -282,6 +283,7 @@ class BaseTrainer:
         self.is_train = False
         self.model.eval()
         self.evaluation_metrics.reset()
+        torch.cuda.empty_cache()
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -491,6 +493,7 @@ class BaseTrainer:
             "lr_scheduler": self.lr_scheduler.state_dict(),
             "monitor_best": self.mnt_best,
             "config": self.config,
+            "cur_step": self.cur_step,
         }
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):
@@ -522,6 +525,7 @@ class BaseTrainer:
         checkpoint = torch.load(resume_path, self.device)
         self.start_epoch = checkpoint["epoch"] + 1
         self.mnt_best = checkpoint["monitor_best"]
+        self.cur_step = checkpoint.get("cur_step", 0)
 
         # load architecture params from checkpoint.
         if checkpoint["config"]["model"] != self.config["model"]:

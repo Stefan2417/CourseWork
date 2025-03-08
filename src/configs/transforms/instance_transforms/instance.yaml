@@ -3,9 +3,9 @@ train:
     _target_: torchvision.transforms.v2.Compose
     transforms:
       - _target_: src.transforms.AudioNormalize
-      - _target_: src.transforms.AdaptiveCrop1D
+      - _target_: src.transforms.RandomCrop1D
         min_sec: 5
-        max_sec: 7
+        max_sec: 10
         sample_rate: 16000
 
 inference:
@@ -13,7 +13,7 @@ inference:
     _target_: torchvision.transforms.v2.Compose
     transforms:
       - _target_: src.transforms.AudioNormalize
-      - _target_: src.transforms.AdaptiveCrop1D
+      - _target_: src.transforms.RandomCrop1D
         min_sec: 5
-        max_sec: 20
+        max_sec: 10
         sample_rate: 16000

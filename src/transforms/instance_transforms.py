@@ -15,14 +15,15 @@ class RandomCrop1D(nn.Module):
     For instance transformation: input [time] -> output [time]
     """
 
-    def __init__(self, max_length, sample_rate=16000):
+    def __init__(self, min_sec=4.0, max_sec=20.0, sample_rate=16000):
         """
         Args:
             max_length (float): Maximum length in seconds.
             sample_rate (int): Sample rate of the audio.
         """
         super().__init__()
-        self.max_samples = int(max_length * sample_rate)
+        self.min_samples = int(min_sec * sample_rate)
+        self.max_samples = int(max_sec * sample_rate)
         self.sample_rate = sample_rate
 
     def forward(self, x):
@@ -38,11 +39,17 @@ class RandomCrop1D(nn.Module):
 
         time = x.size(0)
 
-        if time > self.max_samples:
+        cut_samples = random.randint(self.min_samples, self.max_samples)
+
+        cropped = x
+        if time > cut_samples:
             # Randomly select starting point for crop
-            start = torch.randint(0, time - self.max_samples + 1, (1,)).item()
-            x = x[start:start + self.max_samples]
-        return x
+            start = random.randint(0, time - cut_samples)
+            cropped = x[start:start + self.max_samples]
+        elif time < self.min_samples:
+            repeats = math.ceil(self.min_samples / time)
+            cropped = x.repeat(repeats)[:self.min_samples]
+        return cropped
 
 
 class AudioNormalize(nn.Module):

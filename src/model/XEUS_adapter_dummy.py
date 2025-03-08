@@ -15,7 +15,7 @@ class XeusASVAdapter(nn.Module):
     https://doi.org/10.1186/s13636-019-0166-8
     """
 
-    def __init__(self, pretrain, emb_dim, layers=None):
+    def __init__(self, pretrain, emb_dim, frozen=True, layers=None):
         super().__init__()
         # Loading xeus model with flash attention configuration
         self.xeus, _ = SSLTask.build_model_from_file(
@@ -23,11 +23,10 @@ class XeusASVAdapter(nn.Module):
             model_file=pretrain
         )
 
+        self.xeus_frozen = frozen
+
         for layer in self.xeus.encoder.encoders:
             layer.use_flash_attn = True
-
-        for param in self.xeus.parameters():
-            param.requires_grad_(False)
 
         self.selected_layers = layers
         self.num_blocks = len(self.selected_layers)
@@ -48,13 +47,22 @@ class XeusASVAdapter(nn.Module):
 
     def forward(self, batch):
         # Enable flash attention for the forward pass
-        with torch.cuda.amp.autocast(dtype=torch.bfloat16):
-            encoder_outputs = self.xeus.encode(
-                batch['data_object'],
-                batch['lengths'],
-                use_mask=False,
-                use_final_output=False
-            )[0]
+        with torch.amp.autocast('cuda', dtype=torch.bfloat16):
+            if self.xeus_frozen:
+                with torch.no_grad():
+                    encoder_outputs = self.xeus.encode(
+                        batch['data_object'],
+                        batch['lengths'],
+                        use_mask=False,
+                        use_final_output=False
+                    )[0]
+            else:
+                encoder_outputs = self.xeus.encode(
+                    batch['data_object'],
+                    batch['lengths'],
+                    use_mask=False,
+                    use_final_output=False
+                )[0]
 
         selected_features = [encoder_outputs[layer_idx] for layer_idx in self.selected_layers]
 

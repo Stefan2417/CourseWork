@@ -46,8 +46,6 @@ def main(config):
     else:
         device = config.inferencer.device
 
-
-
     # setup data_loader instances
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
@@ -77,7 +75,7 @@ def main(config):
         batch_transforms=batch_transforms,
         save_path=save_path,
         metrics=None,
-        skip_model_load=False,
+        skip_model_load=config.inferencer.skip_model_load,
     )
 
     if not already_exists:

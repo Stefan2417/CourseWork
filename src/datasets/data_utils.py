@@ -53,30 +53,29 @@ def move_batch_transforms_to_device(batch_transforms, device):
 def get_dataloaders(config, device):
     batch_transforms = instantiate(config.transforms.batch_transforms)
     move_batch_transforms_to_device(batch_transforms, device)
-
     datasets = instantiate(config.datasets)
     dataloaders = {}
+    logger.info('get dataloaders')
 
     for dataset_partition in config.datasets.keys():
         dataset = datasets[dataset_partition]
 
-        dataset_lengths = [item["length"] for item in dataset]
-
-        sampler = instantiate(
-            config.sampler,
-            lengths=dataset_lengths,
-            sample_rate=dataset.sample_rate
+        assert config.dataloader.batch_size <= len(dataset), (
+            f"The batch size ({config.dataloader.batch_size}) cannot "
+            f"be larger than the dataset length ({len(dataset)})"
         )
 
         partition_dataloader = instantiate(
             config.dataloader,
             dataset=dataset,
-            batch_sampler=sampler,
             collate_fn=collate_fn,
-            worker_init_fn=set_worker_seed
+            worker_init_fn=set_worker_seed,
+            drop_last=(dataset_partition == "train"),
+            shuffle=(dataset_partition == "train"),
         )
 
         dataloaders[dataset_partition] = partition_dataloader
+        logger.info(f'success instantiate dataset partition {dataset_partition}')
 
     return dataloaders, batch_transforms
 
