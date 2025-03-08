@@ -118,3 +118,5 @@ VoxCeleb/
 MUSAN/
 eer_distribution.png
 pretrained/
+auth_key.pem
+copy_scp.sh

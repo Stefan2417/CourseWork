@@ -5,14 +5,14 @@ import random
 
 
 class MUSANAugment(torch.nn.Module):
-    def __init__(self, musan_path, sample_rate=16000, min_snr_db=10, max_snr_db=20):
+    def __init__(self, musan_path, skip=False, sample_rate=16000, min_snr_db=10, max_snr_db=20):
         super().__init__()
+        self.skip = skip
         self.sample_rate = sample_rate
         self.min_snr_db = min_snr_db
         self.max_snr_db = max_snr_db
         self.musan_path = Path(musan_path)
 
-        # Кеширование списка файлов
         self.noise_files = self._get_files("noise")
         self.speech_files = self._get_files("speech")
         self.music_files = self._get_files("music")
@@ -36,11 +36,13 @@ class MUSANAugment(torch.nn.Module):
         if waveform.shape[1] > 1:  # [samples, channels]
             waveform = waveform.mean(dim=1, keepdim=True)
 
+        waveform = waveform.to(device)
+
         if waveform.size(0) < target_length:
             repeats = (target_length // waveform.size(0)) + 1
             waveform = waveform.repeat(repeats, 1)
 
-        return waveform[:target_length, 0].to(device)  # [time]
+        return waveform[:target_length, 0]  # [time]
 
     def forward(self, audio):
         """
@@ -49,6 +51,8 @@ class MUSANAugment(torch.nn.Module):
         Returns:
             Augmented audio: Tensor shape [batch, time]
         """
+        if self.skip:
+            return audio
         batch_size, target_length = audio.shape
         device = audio.device
 
