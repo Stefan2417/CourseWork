@@ -4,4 +4,3 @@ VoxCeleb1:
   dir_name: '/home/stefan/Documents/CourseWork/VoxCeleb/vox1_dev_wav/wav'
   instance_transforms: ${transforms.instance_transforms.inference}
   sample_rate: 16000
-  extension: 'wav'

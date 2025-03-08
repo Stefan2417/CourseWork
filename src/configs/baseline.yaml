@@ -18,7 +18,7 @@ lr_scheduler:
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
   embed_dim: 1024
-  num_classes: 100
+  num_classes: 3000
 trainer:
   log_step: 100
   log_audio: False

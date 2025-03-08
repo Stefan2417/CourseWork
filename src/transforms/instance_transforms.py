@@ -52,7 +52,7 @@ class RandomCrop1D(nn.Module):
         return cropped
 
 
-class AudioNormalize(nn.Module):
+class AudioSizeNormalize(nn.Module):
     """
     Convert audio to mono and normalize amplitude.
     For instance transformation: input [channels, time] -> output [time]
@@ -70,7 +70,7 @@ class AudioNormalize(nn.Module):
         """
         if x.dim() == 2:
             if x.size(0) > 1:
-                x = x.mean(dim=0)
+                x = x[0]
             else:
                 x = x.squeeze(0)
         elif x.dim() == 1:

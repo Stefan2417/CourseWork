@@ -3,6 +3,7 @@ import random
 from typing import List
 
 import torch
+import torchaudio
 from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class BaseDataset(Dataset):
     """
 
     def __init__(
-        self, index, limit=None, shuffle_index=False, instance_transforms=None
+        self, index, sample_rate, limit=None, shuffle_index=False, instance_transforms=None
     ):
         """
         Args:
@@ -33,6 +34,7 @@ class BaseDataset(Dataset):
                 should be applied on the instance. Depend on the
                 tensor name.
         """
+        self.sample_rate = sample_rate
         self._assert_index_is_valid(index)
 
         index = self._shuffle_and_limit_index(index, limit, shuffle_index)
@@ -55,12 +57,14 @@ class BaseDataset(Dataset):
             instance_data (dict): dict, containing instance
                 (a single dataset element).
         """
+
         data_dict = self._index[ind]
         data_path = data_dict["path"]
         data_object = self.load_object(data_path)
         data_label = data_dict["label"]
+        data_name = data_dict["name"]
 
-        instance_data = {"data_object": data_object, "labels": data_label}
+        instance_data = {"data_object": data_object, "label": data_label, "name": data_name}
         instance_data = self.preprocess_data(instance_data)
 
         return instance_data
@@ -80,8 +84,9 @@ class BaseDataset(Dataset):
         Returns:
             data_object (Tensor):
         """
-        data_object = torch.load(path)
-        return data_object
+        waveform, sr = torchaudio.load(path)
+        assert sr == self.sample_rate
+        return waveform
 
     def preprocess_data(self, instance_data):
         """
@@ -102,6 +107,8 @@ class BaseDataset(Dataset):
                 instance_data[transform_name] = self.instance_transforms[
                     transform_name
                 ](instance_data[transform_name])
+
+        instance_data["length"] = instance_data["data_object"].size(0)
         return instance_data
 
     @staticmethod

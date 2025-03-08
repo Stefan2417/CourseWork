@@ -5,5 +5,3 @@ train:
 #  dir_name: '/home/stefan/Documents/CourseWork/VoxCeleb/vox2_dev1/aac'
   instance_transforms: ${transforms.instance_transforms.train}
   sample_rate: 16000
-  extension: 'm4a'
-  limit: 100

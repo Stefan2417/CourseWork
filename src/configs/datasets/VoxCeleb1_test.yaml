@@ -5,4 +5,3 @@ VoxCeleb1_test:
   dir_name: '/home/stankuznetsov/CourseWork/vox1_test_wav/wav'
   instance_transforms: ${transforms.instance_transforms.inference}
   sample_rate: 16000
-  extension: 'wav'
