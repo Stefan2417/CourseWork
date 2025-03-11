@@ -5,32 +5,42 @@ from speechbrain.lobes.models.ECAPA_TDNN import BatchNorm1d
 from espnet2.tasks.ssl import SSLTask
 
 
-class XeusASVAdapter(nn.Module):
+class XeusFineTunning(nn.Module):
     """
-    ASV Adapter for fine-tuning from
-
-    Liu Y., He L., Liu J., Johnson M.T. (2019)
-    "Introducing Phonetic Information to Speaker Embedding for Speaker Verification"
-    EURASIP Journal on Audio, Speech, and Music Processing, 2019:19.
-    DOI: 10.1186/s13636-019-0166-8
-    https://doi.org/10.1186/s13636-019-0166-8
     """
 
-    def __init__(self, pretrain, emb_dim, frozen=True, layers=None):
+    def __init__(self, pretrain, emb_dim, freeze_strategy="none",
+                 trainable_layers=None, layers_to_use=None):
+        """
+        """
         super().__init__()
+
         self.xeus, _ = SSLTask.build_model_from_file(
             None,
             model_file=pretrain
         )
 
-        self.xeus_frozen = frozen
-        if frozen:
+        num_layers = len(self.xeus.encoders.encoders)
+
+        if layers_to_use is None:
+            layers_to_use = [0, num_layers // 2, num_layers - 1]
+
+        self.selected_layers = layers_to_use
+        self.num_blocks = len(self.selected_layers)
+        self.output_xeus_emb_sz = 1024
+
+        if freeze_strategy == "none":
+            for param in self.xeus.parameters():
+                param.requires_grad_(True)
+        elif freeze_strategy == "partial":
             for param in self.xeus.parameters():
                 param.requires_grad_(False)
 
-        self.selected_layers = layers
-        self.num_blocks = len(self.selected_layers)
-        self.output_xeus_emb_sz = 1024
+            if trainable_layers:
+                for idx in trainable_layers:
+                    if 0 <= idx < num_layers:
+                        for param in self.xeus.encoders.encoders[idx].parameters():
+                            param.requires_grad_(True)
 
         self.layer_norm = nn.LayerNorm(
             self.output_xeus_emb_sz * self.num_blocks
@@ -41,27 +51,17 @@ class XeusASVAdapter(nn.Module):
         )
 
         self.head = nn.Sequential(
-            # nn.LayerNorm(self.output_xeus_emb_sz * self.num_blocks * 2),
-            BatchNorm1d(input_size=self.output_xeus_emb_sz * self.num_blocks *  2),
+            BatchNorm1d(input_size=self.output_xeus_emb_sz * self.num_blocks * 2),
             nn.Linear(self.output_xeus_emb_sz * self.num_blocks * 2, emb_dim)
         )
 
     def forward(self, batch):
-        if self.xeus_frozen:
-            with torch.no_grad():
-                encoder_outputs = self.xeus.encode(
-                    batch['data_object'],
-                    batch['lengths'],
-                    use_mask=False,
-                    use_final_output=False
-                )[0]
-        else:
-            encoder_outputs = self.xeus.encode(
-                batch['data_object'],
-                batch['lengths'],
-                use_mask=False,
-                use_final_output=False
-            )[0]
+        encoder_outputs = self.xeus.encode(
+            batch['data_object'],
+            batch['lengths'],
+            use_mask=False,
+            use_final_output=False
+        )[0]
 
         selected_features = [encoder_outputs[layer_idx] for layer_idx in self.selected_layers]
 

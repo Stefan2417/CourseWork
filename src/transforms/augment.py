@@ -3,42 +3,66 @@ import torchaudio
 from pathlib import Path
 import random
 
+
 class MUSANAugment(torch.nn.Module):
-    def __init__(self, musan_path, sample_rate=16000, min_snr_db=10, max_snr_db=20):
+    def __init__(self, musan_path, sample_rate=16000, min_snr_db=10, max_snr_db=20, cache_to_memory=True):
         super().__init__()
         self.sample_rate = sample_rate
         self.min_snr_db = min_snr_db
         self.max_snr_db = max_snr_db
         self.musan_path = Path(musan_path)
+        self.cache_to_memory = cache_to_memory
 
-        self.noise_files = self._get_files("noise")
-        self.speech_files = self._get_files("speech")
-        self.music_files = self._get_files("music")
+        self.noise_paths = self._get_files("noise")
+        self.speech_paths = self._get_files("speech")
+        self.music_paths = self._get_files("music")
 
         self._validate_dataset()
+
+        if self.cache_to_memory:
+            self.noise_cache = self._preload_category(self.noise_paths)
+            self.speech_cache = self._preload_category(self.speech_paths)
+            self.music_cache = self._preload_category(self.music_paths)
 
     def _get_files(self, category):
         path = self.musan_path / category
         return sorted(path.rglob("*.wav")) if path.exists() else []
 
+    def _preload_category(self, file_paths):
+        """Preload all audio files in a category into tensors for sharing across processes"""
+        cached_tensors = []
+
+        for file_path in file_paths:
+            waveform, sr = torchaudio.load(file_path, channels_first=False)
+            assert sr == self.sample_rate
+            assert waveform.shape[1] == 1
+            waveform = waveform.squeeze(1)
+            cached_tensors.append(waveform)
+
+        return cached_tensors
+
     def _validate_dataset(self):
-        if not all([self.noise_files, self.speech_files, self.music_files]):
+        if not all([self.noise_paths, self.speech_paths, self.music_paths]):
             raise ValueError(f"Invalid MUSAN dataset at {self.musan_path}")
 
-    def _load_noise(self, file_path, target_length, device):
-        waveform, sr = torchaudio.load(file_path, channels_first=False)
-
-        if sr != self.sample_rate:
-            waveform = torchaudio.functional.resample(waveform.T, sr, self.sample_rate).T
-
-        if waveform.shape[1] > 1:  # [samples, channels]
-            waveform = waveform.mean(dim=1, keepdim=True)
+    def _get_noise(self, category, target_length, device):
+        """Get a random noise sample from the specified category"""
+        if self.cache_to_memory:
+            cache = getattr(self, f"{category}_cache")
+            waveform = random.choice(cache)
+        else:
+            paths = getattr(self, f"{category}_paths")
+            file_path = random.choice(paths)
+            waveform, sr = torchaudio.load(file_path, channels_first=False)
+            assert sr == self.sample_rate
+            assert waveform.shape[1] == 1
+            waveform = waveform.squeeze(1)
 
         if waveform.size(0) < target_length:
             repeats = (target_length // waveform.size(0)) + 1
-            waveform = waveform.repeat(repeats, 1)
+            waveform = waveform.repeat(repeats)
 
-        return waveform[:target_length, 0].to(device)  # [time]
+        return waveform[:target_length].to(device)
 
     def forward(self, audio):
         """
@@ -51,9 +75,7 @@ class MUSANAugment(torch.nn.Module):
         device = audio.device
 
         aug_type = random.choice(["noise", "speech", "music"])
-        file_path = random.choice(getattr(self, f"{aug_type}_files"))
-
-        noise = self._load_noise(file_path, target_length, device)  # [time]
+        noise = self._get_noise(aug_type, target_length, device)  # [time]
 
         snr_db = random.uniform(self.min_snr_db, self.max_snr_db)
         audio_power = audio.pow(2).mean(dim=-1)  # [batch]
@@ -65,5 +87,9 @@ class MUSANAugment(torch.nn.Module):
         return audio + scaled_noise
 
     def __repr__(self):
-        return (f"MonoMUSANAugment(noise={len(self.noise_files)}, "
-                f"speech={len(self.speech_files)}, music={len(self.music_files)})")
+        if self.cache_to_memory:
+            return (f"MUSANAugment(noise={len(self.noise_cache)}, "
+                    f"speech={len(self.speech_cache)}, music={len(self.music_cache)}, cached=True)")
+        else:
+            return (f"MUSANAugment(noise={len(self.noise_paths)}, "
+                    f"speech={len(self.speech_paths)}, music={len(self.music_paths)}, cached=False)")
