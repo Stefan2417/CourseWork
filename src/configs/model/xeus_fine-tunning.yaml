@@ -1,4 +1,4 @@
-_target_: src.model.Xeus
+_target_: src.model.XeusFineTunning
 pretrain: '/home/stankuznetsov/CourseWork/XEUS/model/xeus_checkpoint.pth'
 #pretrain: '/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth'
 layers: [0, 9, 18]

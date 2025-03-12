@@ -10,7 +10,7 @@ class XeusFineTunning(nn.Module):
     """
 
     def __init__(self, pretrain, emb_dim, freeze_strategy="none",
-                 trainable_layers=None, layers_to_use=None):
+                 use_masks=False, layers=None):
         """
         """
         super().__init__()
@@ -20,12 +20,17 @@ class XeusFineTunning(nn.Module):
             model_file=pretrain
         )
 
-        num_layers = len(self.xeus.encoders.encoders)
+        for layer in self.xeus.encoder.encoders:
+            layer.use_flash_attn = True
 
-        if layers_to_use is None:
-            layers_to_use = [0, num_layers // 2, num_layers - 1]
+        if use_masks:
+            self.xeus.masker.mask_prob = 0.65  # default 0.8
+            self.xeus.masker.mask_length = 20  # default 10
+            self.xeus.masker.mask_selection = 'static'  # default 'uniform'
 
-        self.selected_layers = layers_to_use
+        assert layers is not None
+
+        self.selected_layers = layers
         self.num_blocks = len(self.selected_layers)
         self.output_xeus_emb_sz = 1024
 
@@ -33,14 +38,8 @@ class XeusFineTunning(nn.Module):
             for param in self.xeus.parameters():
                 param.requires_grad_(True)
         elif freeze_strategy == "partial":
-            for param in self.xeus.parameters():
-                param.requires_grad_(False)
-
-            if trainable_layers:
-                for idx in trainable_layers:
-                    if 0 <= idx < num_layers:
-                        for param in self.xeus.encoders.encoders[idx].parameters():
-                            param.requires_grad_(True)
+            # TODO
+            pass
 
         self.layer_norm = nn.LayerNorm(
             self.output_xeus_emb_sz * self.num_blocks
@@ -51,28 +50,30 @@ class XeusFineTunning(nn.Module):
         )
 
         self.head = nn.Sequential(
-            BatchNorm1d(input_size=self.output_xeus_emb_sz * self.num_blocks * 2),
+            nn.LayerNorm(self.output_xeus_emb_sz * self.num_blocks * 2),
             nn.Linear(self.output_xeus_emb_sz * self.num_blocks * 2, emb_dim)
         )
+        self.to(torch.bfloat16)
 
     def forward(self, batch):
-        encoder_outputs = self.xeus.encode(
-            batch['data_object'],
-            batch['lengths'],
-            use_mask=False,
-            use_final_output=False
-        )[0]
+        with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+            encoder_outputs = self.xeus.encode(
+                batch['data_object'],
+                batch['lengths'],
+                use_mask=False,
+                use_final_output=False
+            )[0]
 
-        selected_features = [encoder_outputs[layer_idx] for layer_idx in self.selected_layers]
+            selected_features = [encoder_outputs[layer_idx] for layer_idx in self.selected_layers]
 
-        concatenated = torch.cat(selected_features, dim=-1)  # [batch, time, dim*N]
+            concatenated = torch.cat(selected_features, dim=-1)  # [batch, time, dim*N]
 
-        normalized = self.layer_norm(concatenated)
+            normalized = self.layer_norm(concatenated)
 
-        asp_input = normalized.permute(0, 2, 1)
+            asp_input = normalized.permute(0, 2, 1)
 
-        pooled = self.asp(asp_input, lengths=batch['lengths'])
+            pooled = self.asp(asp_input, lengths=batch['lengths'])
 
-        embeddings = self.head(pooled.squeeze(-1))
+            embeddings = self.head(pooled.squeeze(-1))
 
-        return {"embeddings": embeddings}
+            return {"embeddings": embeddings}

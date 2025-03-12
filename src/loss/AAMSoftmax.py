@@ -32,6 +32,8 @@ class AAMSoftmaxLoss(nn.Module):
         embeddings = batch['embeddings']
         labels = batch['labels']
 
+        embeddings = embeddings.float()
+
         embeddings_norm = F.normalize(embeddings, p=2, dim=1)
         weights_norm = F.normalize(self.weight, p=2, dim=1)
 
