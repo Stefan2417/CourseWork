@@ -1,9 +1,13 @@
+import logging
+
 from torch import nn
 import torch
 from speechbrain.lobes.models.ECAPA_TDNN import AttentiveStatisticsPooling
 from speechbrain.lobes.models.ECAPA_TDNN import BatchNorm1d
 from espnet2.tasks.ssl import SSLTask
 
+
+logger = logging.getLogger(__name__)
 
 class XeusFineTunning(nn.Module):
     """
@@ -38,8 +42,16 @@ class XeusFineTunning(nn.Module):
             for param in self.xeus.parameters():
                 param.requires_grad_(True)
         elif freeze_strategy == "partial":
-            # TODO
-            pass
+            for param in self.xeus.parameters():
+                param.requires_grad_(False)
+
+            num_xeus_layers = len(self.xeus.encoder.encoders)
+
+            layers_to_unfreeze = num_xeus_layers // 2
+            for i in range(num_xeus_layers - layers_to_unfreeze, num_xeus_layers):
+                print(f'unfreeze: {i}')
+                for param in self.xeus.encoder.encoders[i].parameters():
+                    param.requires_grad_ = True
 
         self.layer_norm = nn.LayerNorm(
             self.output_xeus_emb_sz * self.num_blocks
@@ -53,27 +65,25 @@ class XeusFineTunning(nn.Module):
             nn.LayerNorm(self.output_xeus_emb_sz * self.num_blocks * 2),
             nn.Linear(self.output_xeus_emb_sz * self.num_blocks * 2, emb_dim)
         )
-        self.to(torch.bfloat16)
 
     def forward(self, batch):
-        with torch.cuda.amp.autocast(dtype=torch.bfloat16):
-            encoder_outputs = self.xeus.encode(
-                batch['data_object'],
-                batch['lengths'],
-                use_mask=False,
-                use_final_output=False
-            )[0]
+        encoder_outputs = self.xeus.encode(
+            batch['data_object'],
+            batch['lengths'],
+            use_mask=False,
+            use_final_output=False
+        )[0]
 
-            selected_features = [encoder_outputs[layer_idx] for layer_idx in self.selected_layers]
+        selected_features = [encoder_outputs[layer_idx] for layer_idx in self.selected_layers]
 
-            concatenated = torch.cat(selected_features, dim=-1)  # [batch, time, dim*N]
+        concatenated = torch.cat(selected_features, dim=-1)  # [batch, time, dim*N]
 
-            normalized = self.layer_norm(concatenated)
+        normalized = self.layer_norm(concatenated)
 
-            asp_input = normalized.permute(0, 2, 1)
+        asp_input = normalized.permute(0, 2, 1)
 
-            pooled = self.asp(asp_input, lengths=batch['lengths'])
+        pooled = self.asp(asp_input, lengths=batch['lengths'])
 
-            embeddings = self.head(pooled.squeeze(-1))
+        embeddings = self.head(pooled.squeeze(-1))
 
-            return {"embeddings": embeddings}
+        return {"embeddings": embeddings}

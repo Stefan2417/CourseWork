@@ -67,6 +67,7 @@ class BaseTrainer:
         self.logger = logger
         self.log_step = config.trainer.get("log_step", 50)
         self.cur_step = 0
+        self.use_amp_autocast = config.trainer.get("use_amp_autocast", False)
 
         self.model = model
         self.criterion = criterion

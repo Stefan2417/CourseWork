@@ -31,29 +31,56 @@ class Trainer(BaseTrainer):
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        if self.is_train:
-            self.optimizer.zero_grad()
+        if self.use_amp_autocast:
+            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+                if self.is_train:
+                    self.optimizer.zero_grad()
 
-        outputs = self.model(batch)
-        batch.update(outputs)
+                outputs = self.model(batch)
+                batch.update(outputs)
 
-        if self.is_train:
-            all_losses = self.criterion(batch)
-            batch.update(all_losses)
+                if self.is_train:
+                    all_losses = self.criterion(batch)
+                    batch.update(all_losses)
 
-            batch["loss"].backward()  # sum of all losses is always called loss
-            self._clip_grad_norm()
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-            for loss_name in self.config.writer.loss_names:
-                metrics.update(loss_name, batch[loss_name].item())
+                    batch["loss"].backward()
+                    self._clip_grad_norm()
+                    self.optimizer.step()
+                    if self.lr_scheduler is not None:
+                        self.lr_scheduler.step()
+                    for loss_name in self.config.writer.loss_names:
+                        metrics.update(loss_name, batch[loss_name].item())
 
-        if not self.is_train:
-            metric_funcs = self.metrics["train_inference"]
-            for met in metric_funcs:
-                met(batch_embeddings=batch)
-        return batch
+                if not self.is_train:
+                    metric_funcs = self.metrics["train_inference"]
+                    for met in metric_funcs:
+                        met(batch_embeddings=batch)
+                return batch
+
+        else:
+            if self.is_train:
+                self.optimizer.zero_grad()
+
+            outputs = self.model(batch)
+            batch.update(outputs)
+
+            if self.is_train:
+                all_losses = self.criterion(batch)
+                batch.update(all_losses)
+
+                batch["loss"].backward()  # sum of all losses is always called loss
+                self._clip_grad_norm()
+                self.optimizer.step()
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step()
+                for loss_name in self.config.writer.loss_names:
+                    metrics.update(loss_name, batch[loss_name].item())
+
+            if not self.is_train:
+                metric_funcs = self.metrics["train_inference"]
+                for met in metric_funcs:
+                    met(batch_embeddings=batch)
+            return batch
 
     def _evaluation_epoch(self, epoch, part, dataloader):
         """
