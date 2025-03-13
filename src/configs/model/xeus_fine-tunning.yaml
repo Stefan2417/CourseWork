@@ -3,4 +3,4 @@ _target_: src.model.XeusFineTunning
 pretrain: '/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth'
 layers: [0, 9, 18]
 emb_dim: 1024
-freeze_strategy: 'partial'
+freeze_strategy: 'none'

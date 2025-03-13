@@ -30,6 +30,7 @@ class BaseTrainer:
         epoch_len=None,
         skip_oom=True,
         batch_transforms=None,
+        scaler=None,
     ):
         """
         Args:
@@ -66,6 +67,8 @@ class BaseTrainer:
 
         self.logger = logger
         self.log_step = config.trainer.get("log_step", 50)
+        self.log_evaluation = config.trainer.get("log_evaluation", 10**9)
+
         self.cur_step = 0
         self.use_amp_autocast = config.trainer.get("use_amp_autocast", False)
 
@@ -74,6 +77,7 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
+        self.scaler = scaler
 
         self.logger.info(f'dataloaders: {dataloaders}')
 
@@ -259,6 +263,17 @@ class BaseTrainer:
                 # because we are interested in recent train metrics
                 last_train_metrics = self.train_metrics.result()
                 self.train_metrics.reset()
+
+            if batch_idx % self.log_evaluation == 0:
+                self.writer.set_step(self.cur_step)
+
+                for part, dataloader in self.evaluation_dataloaders.items():
+                    val_logs = self._evaluation_epoch(epoch, part, dataloader)
+                    self.train_metrics.update(**{f"{part}_{name}": value for name, value in val_logs.items()})
+
+                last_train_metrics = self.train_metrics.result()
+                self.train_metrics.reset()
+
             if batch_idx + 1 >= self.epoch_len:
                 break
 
@@ -402,6 +417,9 @@ class BaseTrainer:
         config.trainer.max_grad_norm
         """
         if self.config["trainer"].get("max_grad_norm", None) is not None:
+            if self.scaler is not None:
+                # Unscale gradients before clipping
+                self.scaler.unscale_(self.optimizer)
             clip_grad_norm_(
                 self.model.parameters(), self.config["trainer"]["max_grad_norm"]
             )
