@@ -32,7 +32,7 @@ class Trainer(BaseTrainer):
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
         if self.use_amp_autocast:
-            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+            with torch.amp.autocast('cuda', dtype=torch.bfloat16):
                 if self.is_train:
                     self.optimizer.zero_grad()
 
@@ -43,7 +43,6 @@ class Trainer(BaseTrainer):
                     all_losses = self.criterion(batch)
                     batch.update(all_losses)
 
-                    batch["loss"].backward()
                     self.scaler.scale(batch["loss"]).backward()
                     self._clip_grad_norm()
                     self.scaler.step(self.optimizer)

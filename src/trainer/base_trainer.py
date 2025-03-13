@@ -264,16 +264,6 @@ class BaseTrainer:
                 last_train_metrics = self.train_metrics.result()
                 self.train_metrics.reset()
 
-            if batch_idx % self.log_evaluation == 0:
-                self.writer.set_step(self.cur_step)
-
-                for part, dataloader in self.evaluation_dataloaders.items():
-                    val_logs = self._evaluation_epoch(epoch, part, dataloader)
-                    self.train_metrics.update(**{f"{part}_{name}": value for name, value in val_logs.items()})
-
-                last_train_metrics = self.train_metrics.result()
-                self.train_metrics.reset()
-
             if batch_idx + 1 >= self.epoch_len:
                 break
 

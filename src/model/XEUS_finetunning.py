@@ -39,8 +39,7 @@ class XeusFineTunning(nn.Module):
         self.output_xeus_emb_sz = 1024
 
         if freeze_strategy == "none":
-            for param in self.xeus.parameters():
-                param.requires_grad_(True)
+            pass
         elif freeze_strategy == "partial":
             for param in self.xeus.parameters():
                 param.requires_grad_(False)
