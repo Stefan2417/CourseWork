@@ -37,8 +37,13 @@ class XeusFineTunning(nn.Module):
         self.selected_layers = layers
         self.num_blocks = len(self.selected_layers)
         self.output_xeus_emb_sz = 1024
-
-        if freeze_strategy == "none":
+        if freeze_strategy == 'only_encoders':
+            for param in self.xeus.parameters():
+                param.requires_grad_(False)
+            for encoder in self.xeus.encoder.encoders:
+                for param in encoder.parameters():
+                    param.requires_grad_ = True
+        elif freeze_strategy == "none":
             pass
         elif freeze_strategy == "partial":
             for param in self.xeus.parameters():

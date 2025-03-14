@@ -9,5 +9,5 @@
 #SBATCH --mail-user=stankuznetsov@edu.hse.ru    # Укажи�~Bе ва�~H email дл�~O о�~Bп�~@авки �~Cведомлений
 #SBATCH --mail-type=END,FAIL               # Соб�~K�~Bи�~O, �~B�~@еб�~C�~N�~Iие �~Cведомлени�~O
 
-python /home/stankuznetsov/CourseWork/train.py                          # Выполнение расчёта
+python /home/stankuznetsov/CourseWork/train.py dataloader.batch_size=128 model.freeze_strategy='only_encoders' writer.run_name='encoders_fine-tunning_cluster' optimizer.lr=0.00001 lr_scheduler.eta_min=0.000001 optimizer.weight_decay=0.000001
 #srun {options} {command}            # Выполнение MPI расчёта

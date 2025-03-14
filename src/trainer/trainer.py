@@ -32,31 +32,30 @@ class Trainer(BaseTrainer):
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
         if self.use_amp_autocast:
+            if self.is_train:
+                self.optimizer.zero_grad()
             with torch.amp.autocast('cuda', dtype=torch.bfloat16):
-                if self.is_train:
-                    self.optimizer.zero_grad()
-
                 outputs = self.model(batch)
                 batch.update(outputs)
-
                 if self.is_train:
                     all_losses = self.criterion(batch)
                     batch.update(all_losses)
 
-                    self.scaler.scale(batch["loss"]).backward()
-                    self._clip_grad_norm()
-                    self.scaler.step(self.optimizer)
-                    self.scaler.update()
-                    if self.lr_scheduler is not None:
-                        self.lr_scheduler.step()
-                    for loss_name in self.config.writer.loss_names:
-                        metrics.update(loss_name, batch[loss_name].item())
+            if self.is_train:
+                self.scaler.scale(batch["loss"]).backward()
+                self._clip_grad_norm()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step()
+                for loss_name in self.config.writer.loss_names:
+                    metrics.update(loss_name, batch[loss_name].item())
 
-                if not self.is_train:
-                    metric_funcs = self.metrics["train_inference"]
-                    for met in metric_funcs:
-                        met(batch_embeddings=batch)
-                return batch
+            if not self.is_train:
+                metric_funcs = self.metrics["train_inference"]
+                for met in metric_funcs:
+                    met(batch_embeddings=batch)
+            return batch
 
         else:
             assert self.scaler is None
