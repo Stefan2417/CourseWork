@@ -42,7 +42,7 @@ class XeusFineTunning(nn.Module):
                 param.requires_grad_(False)
             for encoder in self.xeus.encoder.encoders:
                 for param in encoder.parameters():
-                    param.requires_grad_ = True
+                    param.requires_grad_(True)
         elif freeze_strategy == "none":
             pass
         elif freeze_strategy == "partial":
@@ -55,7 +55,7 @@ class XeusFineTunning(nn.Module):
             for i in range(num_xeus_layers - layers_to_unfreeze, num_xeus_layers):
                 print(f'unfreeze: {i}')
                 for param in self.xeus.encoder.encoders[i].parameters():
-                    param.requires_grad_ = True
+                    param.requires_grad_(True)
 
         self.layer_norm = nn.LayerNorm(
             self.output_xeus_emb_sz * self.num_blocks
