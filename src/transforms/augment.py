@@ -2,6 +2,7 @@ import torch
 import torchaudio
 from pathlib import Path
 import random
+import pyarrow as pa
 
 
 class MUSANAugment(torch.nn.Module):
@@ -30,16 +31,16 @@ class MUSANAugment(torch.nn.Module):
 
     def _preload_category(self, file_paths):
         """Preload all audio files in a category into tensors for sharing across processes"""
-        cached_tensors = []
+        pa_arrays = []
 
         for file_path in file_paths:
             waveform, sr = torchaudio.load(file_path, channels_first=False)
             assert sr == self.sample_rate
             assert waveform.shape[1] == 1
-            waveform = waveform.squeeze(1)
-            cached_tensors.append(waveform)
+            waveform_np = waveform.squeeze(1).numpy()
+            pa_arrays.append(pa.array(waveform_np))
 
-        return cached_tensors
+        return pa_arrays
 
     def _validate_dataset(self):
         if not all([self.noise_paths, self.speech_paths, self.music_paths]):
@@ -49,7 +50,8 @@ class MUSANAugment(torch.nn.Module):
         """Get a random noise sample from the specified category"""
         if self.cache_to_memory:
             cache = getattr(self, f"{category}_cache")
-            waveform = random.choice(cache)
+            pa_array = random.choice(cache)
+            waveform = torch.from_numpy(pa_array.to_numpy()).float()
         else:
             paths = getattr(self, f"{category}_paths")
             file_path = random.choice(paths)

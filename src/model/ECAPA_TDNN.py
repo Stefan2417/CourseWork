@@ -21,7 +21,6 @@ class EmbedderRawNet(nn.Module):
             run_opts={"device": self.device}
         )
 
-
     def forward(self, batch: dict) -> torch.Tensor:
         waveforms = batch['data_object']
 

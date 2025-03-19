@@ -5,7 +5,7 @@
 #SBATCH --time=100:00:00            # Максимальное время выполнения
 #SBATCH --nodes=1                  # Требуемое кол-во узлов
 #SBATCH --gpus=1                   # Требуемое кол-во GPU
-#SBATCH --cpus-per-task=1          # Требуемое кол-во CPU
+#SBATCH --cpus-per-task=4          # Требуемое кол-во CPU
 #SBATCH --mail-user=stankuznetsov@edu.hse.ru    # Укажи�~Bе ва�~H email дл�~O о�~Bп�~@авки �~Cведомлений
 #SBATCH --mail-type=END,FAIL               # Соб�~K�~Bи�~O, �~B�~@еб�~C�~N�~Iие �~Cведомлени�~O
 

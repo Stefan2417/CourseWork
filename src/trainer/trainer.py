@@ -34,7 +34,7 @@ class Trainer(BaseTrainer):
         if self.use_amp_autocast:
             if self.is_train:
                 self.optimizer.zero_grad()
-            with torch.amp.autocast('cuda', dtype=torch.bfloat16):
+            with torch.amp.autocast('cuda', dtype=torch.float16):
                 outputs = self.model(batch)
                 batch.update(outputs)
                 if self.is_train:

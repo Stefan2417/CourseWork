@@ -225,7 +225,6 @@ class BaseTrainer:
 
 
         self.writer.add_scalar("epoch", epoch)
-        self.epoch_len = len(self.train_dataloader)
 
         for batch_idx, batch in enumerate(
             tqdm(self.train_dataloader, desc="train", total=self.epoch_len)

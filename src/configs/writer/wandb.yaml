@@ -1,7 +1,7 @@
 _target_: src.logger.WandBWriter
 project_name: "CourseWork"
 entity: null
-run_name: "fine-tunning_from_pretrained_head"
+run_name: "adapter_training_v1"
 mode: "online"
 loss_names: ["loss"] # which losses to log (useful for multi-loss tasks, s.a. GANs)
 log_checkpoints: False # set to True if you want to log save_dir with checkpoints to W&B

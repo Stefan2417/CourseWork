@@ -1,6 +1,6 @@
 _target_: src.model.XeusFineTunning
 pretrain: '/home/stankuznetsov/CourseWork/XEUS/model/xeus_checkpoint.pth'
 #pretrain: '/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth'
-layers: [10, 11, 12, 13, 14]
-emb_dim: 1024
-freeze_strategy: 'none'
+layers: [8, 9, 10, 11, 12, 13]
+emb_dim: 256
+freeze_strategy: 'all'
