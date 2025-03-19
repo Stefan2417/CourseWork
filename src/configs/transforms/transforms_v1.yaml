@@ -1,4 +1,4 @@
 defaults:
-  - batch_transforms: musan
+  - batch_transforms: null
   - instance_transforms: instance
   - _self_

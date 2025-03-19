@@ -1,97 +1,113 @@
-import torch
-import torchaudio
-from pathlib import Path
+import numpy as np
+import os
+import glob
 import random
-import pyarrow as pa
+import soundfile
+import torch
+from scipy import signal
 
 
-class MUSANAugment(torch.nn.Module):
-    def __init__(self, musan_path, sample_rate=16000, min_snr_db=10, max_snr_db=20, cache_to_memory=True):
+class InstanceAugment(torch.nn.Module):
+    def __init__(self, musan_path, rir_path=None):
         super().__init__()
-        self.sample_rate = sample_rate
-        self.min_snr_db = min_snr_db
-        self.max_snr_db = max_snr_db
-        self.musan_path = Path(musan_path)
-        self.cache_to_memory = cache_to_memory
-
-        self.noise_paths = self._get_files("noise")
-        self.speech_paths = self._get_files("speech")
-        self.music_paths = self._get_files("music")
-
-        self._validate_dataset()
-
-        if self.cache_to_memory:
-            self.noise_cache = self._preload_category(self.noise_paths)
-            self.speech_cache = self._preload_category(self.speech_paths)
-            self.music_cache = self._preload_category(self.music_paths)
-
-    def _get_files(self, category):
-        path = self.musan_path / category
-        return sorted(path.rglob("*.wav")) if path.exists() else []
-
-    def _preload_category(self, file_paths):
-        """Preload all audio files in a category into tensors for sharing across processes"""
-        pa_arrays = []
-
-        for file_path in file_paths:
-            waveform, sr = torchaudio.load(file_path, channels_first=False)
-            assert sr == self.sample_rate
-            assert waveform.shape[1] == 1
-            waveform_np = waveform.squeeze(1).numpy()
-            pa_arrays.append(pa.array(waveform_np))
-
-        return pa_arrays
-
-    def _validate_dataset(self):
-        if not all([self.noise_paths, self.speech_paths, self.music_paths]):
-            raise ValueError(f"Invalid MUSAN dataset at {self.musan_path}")
-
-    def _get_noise(self, category, target_length, device):
-        """Get a random noise sample from the specified category"""
-        if self.cache_to_memory:
-            cache = getattr(self, f"{category}_cache")
-            pa_array = random.choice(cache)
-            waveform = torch.from_numpy(pa_array.to_numpy()).float()
-        else:
-            paths = getattr(self, f"{category}_paths")
-            file_path = random.choice(paths)
-            waveform, sr = torchaudio.load(file_path, channels_first=False)
-            assert sr == self.sample_rate
-            assert waveform.shape[1] == 1
-            waveform = waveform.squeeze(1)
-
-        if waveform.size(0) < target_length:
-            repeats = (target_length // waveform.size(0)) + 1
-            waveform = waveform.repeat(repeats)
-
-        return waveform[:target_length].to(device)
-
-    def forward(self, audio):
         """
-        Args:
-            audio: Tensor shape [batch, time]
-        Returns:
-            Augmented audio: Tensor shape [batch, time]
+        according to https://github.com/TaoRuijie/ECAPA-TDNN/blob/main/dataLoader.py
         """
-        batch_size, target_length = audio.shape
+
+        self.noisetypes = ['noise', 'speech', 'music']
+        self.noisesnr = {'noise': [0, 15], 'speech': [13, 20], 'music': [5, 15]}
+        self.numnoise = {'noise': [1, 1], 'speech': [3, 8], 'music': [1, 1]}
+        self.noiselist = {}
+
+        augment_files = glob.glob(os.path.join(str(musan_path), '*/*/*/*.wav'))
+        for file in augment_files:
+            if file.split('/')[-4] not in self.noiselist:
+                self.noiselist[file.split('/')[-4]] = []
+            self.noiselist[file.split('/')[-4]].append(file)
+
+        self.rir_files = []
+        if rir_path:
+            self.rir_files = glob.glob(os.path.join(str(rir_path), '*/*/*.wav'))
+
+    def add_rev(self, audio):
+        """
+        Add reverbation with rirs files
+        """
+
+        if not self.rir_files:
+            return audio
+
+        assert audio.device == torch.device('cpu')
+
+        audio_length = audio.shape[1]
+        rir_file = random.choice(self.rir_files)
+        rir, sr = soundfile.read(rir_file)
+
+        rir.to_device(audio.device)
+        rir = np.expand_dims(rir.astype(np.float32), 0)
+        rir = rir / np.sqrt(np.sum(rir ** 2))
+        return signal.convolve(audio, rir, mode='full')[:, :audio_length]
+
+    def add_noise(self, audio, noisecat):
+        """
+        Add noise of a specific category to the audio
+        """
         device = audio.device
+        audio_length = audio.shape[0]
 
-        aug_type = random.choice(["noise", "speech", "music"])
-        noise = self._get_noise(aug_type, target_length, device)  # [time]
+        clean_db = 10 * torch.log10(torch.mean(audio ** 2) + 1e-4)
+        numnoise = self.numnoise[noisecat]
+        noiselist = random.sample(self.noiselist[noisecat], random.randint(numnoise[0], numnoise[1]))
+        noises = []
 
-        snr_db = random.uniform(self.min_snr_db, self.max_snr_db)
-        audio_power = audio.pow(2).mean(dim=-1)  # [batch]
-        noise_power = noise.pow(2).mean()
 
-        scale = torch.sqrt(audio_power / (noise_power * (10 ** (snr_db / 10)) + 1e-8))
-        scaled_noise = scale.view(-1, 1) * noise  # [batch, time]
+        for noise in noiselist:
+            noiseaudio, sr = soundfile.read(noise)
+            if len(noiseaudio) <= audio_length:
+                shortage = audio_length - len(noiseaudio)
+                noiseaudio = np.pad(noiseaudio, (0, shortage), 'wrap')
 
-        return audio + scaled_noise
+            start_frame = np.int64(random.random() * (len(noiseaudio) - audio_length))
+            noiseaudio = noiseaudio[start_frame:start_frame + audio_length]
+            noiseaudio = torch.tensor(noiseaudio, dtype=torch.float32, device=device)
+            noise_db = 10 * torch.log10(torch.mean(noiseaudio ** 2) + 1e-4)
+            noisesnr = random.uniform(self.noisesnr[noisecat][0], self.noisesnr[noisecat][1])
+            scaling = torch.sqrt(10 ** ((clean_db - noise_db - noisesnr) / 10))
+            scaled_noise = scaling * noiseaudio
+            noises.append(scaled_noise)
 
-    def __repr__(self):
-        if self.cache_to_memory:
-            return (f"MUSANAugment(noise={len(self.noise_cache)}, "
-                    f"speech={len(self.speech_cache)}, music={len(self.music_cache)}, cached=True)")
-        else:
-            return (f"MUSANAugment(noise={len(self.noise_paths)}, "
-                    f"speech={len(self.speech_paths)}, music={len(self.music_paths)}, cached=False)")
+        if noises:
+            total_noise = torch.stack(noises).sum(dim=0)
+            return audio + total_noise
+
+        return audio
+
+    def forward(self, audio, aug_type=None):
+        """
+        Apply augmentation to the audio
+
+        Args:
+            audio: Input audio tensor (1D tensor)
+            aug_type: Augmentation type (0-5). If None, a random type is selected.
+
+        Returns:
+            Augmented audio tensor
+        """
+        if aug_type is None:
+            aug_type = random.randint(0, 5)
+
+        if aug_type == 0:  # Original
+            return audio
+        elif aug_type == 1:  # Reverberation
+            return self.add_rev(audio)
+        elif aug_type == 2:  # Babble
+            return self.add_noise(audio, 'speech')
+        elif aug_type == 3:  # Music
+            return self.add_noise(audio, 'music')
+        elif aug_type == 4:  # Noise
+            return self.add_noise(audio, 'noise')
+        elif aug_type == 5:  # Television noise
+            audio = self.add_noise(audio, 'speech')
+            audio = self.add_noise(audio, 'music')
+            return audio
+        return audio
