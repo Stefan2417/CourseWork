@@ -58,7 +58,6 @@ class Trainer(BaseTrainer):
             return batch
 
         else:
-            assert self.scaler is None
             if self.is_train:
                 self.optimizer.zero_grad()
 

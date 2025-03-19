@@ -120,3 +120,4 @@ eer_distribution.png
 pretrained/
 auth_key.pem
 copy_scp.sh
+RIRS_NOISES/

@@ -14,41 +14,45 @@ class InstanceAugment(torch.nn.Module):
         according to https://github.com/TaoRuijie/ECAPA-TDNN/blob/main/dataLoader.py
         """
 
-        self.noisetypes = ['noise', 'speech', 'music']
-        self.noisesnr = {'noise': [0, 15], 'speech': [13, 20], 'music': [5, 15]}
-        self.numnoise = {'noise': [1, 1], 'speech': [3, 8], 'music': [1, 1]}
-        self.noiselist = {}
+        self.noise_types = ['noise', 'speech', 'music']
+        self.noise_snr = {'noise': [0, 15], 'speech': [13, 20], 'music': [5, 15]}
+        self.num_noise = {'noise': [1, 1], 'speech': [3, 8], 'music': [1, 1]}
+        self.noise_list = {}
 
-        augment_files = glob.glob(os.path.join(str(musan_path), '*/*/*/*.wav'))
+        augment_files = glob.glob(os.path.join(str(musan_path), '*/*/*.wav'))
+
         for file in augment_files:
-            if file.split('/')[-4] not in self.noiselist:
-                self.noiselist[file.split('/')[-4]] = []
-            self.noiselist[file.split('/')[-4]].append(file)
+            if file.split('/')[-3] not in self.noise_list:
+                self.noise_list[file.split('/')[-3]] = []
+            self.noise_list[file.split('/')[-3]].append(file)
 
         self.rir_files = []
         if rir_path:
-            self.rir_files = glob.glob(os.path.join(str(rir_path), '*/*/*.wav'))
+            self.rir_files = glob.glob(os.path.join(str(rir_path), '*/*.wav'))
+        print(self.noise_list.keys())
 
     def add_rev(self, audio):
         """
-        Add reverbation with rirs files
+        Add reverberation with rirs files
         """
 
         if not self.rir_files:
             return audio
 
         assert audio.device == torch.device('cpu')
+        audio_length = audio.shape[0]
 
-        audio_length = audio.shape[1]
         rir_file = random.choice(self.rir_files)
         rir, sr = soundfile.read(rir_file)
 
-        rir.to_device(audio.device)
-        rir = np.expand_dims(rir.astype(np.float32), 0)
-        rir = rir / np.sqrt(np.sum(rir ** 2))
-        return signal.convolve(audio, rir, mode='full')[:, :audio_length]
+        if len(rir.shape) > 1:
+            rir = np.mean(rir, axis=1)
 
-    def add_noise(self, audio, noisecat):
+        rir = rir / np.sqrt(np.sum(rir ** 2))
+        res = signal.convolve(audio.numpy(), rir, mode='full')[:audio_length]
+        return torch.from_numpy(res.astype(np.float32))
+
+    def add_noise(self, audio, noise_cat):
         """
         Add noise of a specific category to the audio
         """
@@ -56,24 +60,24 @@ class InstanceAugment(torch.nn.Module):
         audio_length = audio.shape[0]
 
         clean_db = 10 * torch.log10(torch.mean(audio ** 2) + 1e-4)
-        numnoise = self.numnoise[noisecat]
-        noiselist = random.sample(self.noiselist[noisecat], random.randint(numnoise[0], numnoise[1]))
+        num_noise = self.num_noise[noise_cat]
+        noise_list = random.sample(self.noise_list[noise_cat], random.randint(num_noise[0], num_noise[1]))
         noises = []
 
 
-        for noise in noiselist:
-            noiseaudio, sr = soundfile.read(noise)
-            if len(noiseaudio) <= audio_length:
-                shortage = audio_length - len(noiseaudio)
-                noiseaudio = np.pad(noiseaudio, (0, shortage), 'wrap')
+        for noise in noise_list:
+            noise_audio, sr = soundfile.read(noise)
+            if len(noise_audio) <= audio_length:
+                shortage = audio_length - len(noise_audio)
+                noise_audio = np.pad(noise_audio, (0, shortage), 'wrap')
 
-            start_frame = np.int64(random.random() * (len(noiseaudio) - audio_length))
-            noiseaudio = noiseaudio[start_frame:start_frame + audio_length]
-            noiseaudio = torch.tensor(noiseaudio, dtype=torch.float32, device=device)
-            noise_db = 10 * torch.log10(torch.mean(noiseaudio ** 2) + 1e-4)
-            noisesnr = random.uniform(self.noisesnr[noisecat][0], self.noisesnr[noisecat][1])
-            scaling = torch.sqrt(10 ** ((clean_db - noise_db - noisesnr) / 10))
-            scaled_noise = scaling * noiseaudio
+            start_frame = np.int64(random.random() * (len(noise_audio) - audio_length))
+            noise_audio = noise_audio[start_frame:start_frame + audio_length]
+            noise_audio = torch.tensor(noise_audio, dtype=torch.float32, device=device)
+            noise_db = 10 * torch.log10(torch.mean(noise_audio ** 2) + 1e-4)
+            noise_snr = random.uniform(self.noise_snr[noise_cat][0], self.noise_snr[noise_cat][1])
+            scaling = torch.sqrt(10 ** ((clean_db - noise_db - noise_snr) / 10))
+            scaled_noise = scaling * noise_audio
             noises.append(scaled_noise)
 
         if noises:
