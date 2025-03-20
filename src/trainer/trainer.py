@@ -32,31 +32,31 @@ class Trainer(BaseTrainer):
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
         if self.use_amp_autocast:
-            if self.is_train:
-                self.optimizer.zero_grad()
-            with torch.amp.autocast('cuda', dtype=torch.float16):
-                outputs = self.model(batch)
-                batch.update(outputs)
-                if self.is_train:
-                    all_losses = self.criterion(batch)
-                    batch.update(all_losses)
-
-            if self.is_train:
-                self.scaler.scale(batch["loss"]).backward()
-                self._clip_grad_norm()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-                if self.lr_scheduler is not None:
-                    self.lr_scheduler.step()
-                for loss_name in self.config.writer.loss_names:
-                    metrics.update(loss_name, batch[loss_name].item())
-
-            if not self.is_train:
-                metric_funcs = self.metrics["train_inference"]
-                for met in metric_funcs:
-                    met(batch_embeddings=batch)
-            return batch
-
+            # if self.is_train: TODO REFACTOR
+            #     self.optimizer.zero_grad()
+            # with torch.amp.autocast('cuda', dtype=torch.float16):
+            #     outputs = self.model(batch)
+            #     batch.update(outputs)
+            #     if self.is_train:
+            #         all_losses = self.criterion(batch)
+            #         batch.update(all_losses)
+            #
+            # if self.is_train:
+            #     self.scaler.scale(batch["loss"]).backward()
+            #     self._clip_grad_norm()
+            #     self.scaler.step(self.optimizer)
+            #     self.scaler.update()
+            #     if self.lr_scheduler is not None:
+            #         self.lr_scheduler.step()
+            #     for loss_name in self.config.writer.loss_names:
+            #         metrics.update(loss_name, batch[loss_name].item())
+            #
+            # if not self.is_train:
+            #     metric_funcs = self.metrics["train_inference"]
+            #     for met in metric_funcs:
+            #         met(batch_embeddings=batch)
+            # return batch
+            pass
         else:
             if self.is_train:
                 self.optimizer.zero_grad()
@@ -67,16 +67,11 @@ class Trainer(BaseTrainer):
             if self.is_train:
                 all_losses = self.criterion(batch)
                 batch.update(all_losses)
-                if self.accelerator is not None:
-                    self.accelerator.backward(batch["loss"])
-                else:
-                    batch["loss"].backward()  # sum of all losses is always called loss
+                self.accelerator.backward(batch["loss"])
                 self._clip_grad_norm()
                 self.optimizer.step()
-                if self.lr_scheduler is not None:
-                    self.lr_scheduler.step()
-                for loss_name in self.config.writer.loss_names:
-                    metrics.update(loss_name, batch[loss_name].item())
+
+                metrics.update("loss", batch["loss"])
 
             if not self.is_train:
                 metric_funcs = self.metrics["train_inference"]
@@ -95,8 +90,13 @@ class Trainer(BaseTrainer):
         Returns:
             logs (dict): logs that contain the information about evaluation.
         """
-
+        self.accelerator.wait_for_everyone()
+        if not self.accelerator.is_main_process:
+            return {}
         self.is_train = False
+        original_model = self.model
+        self.model = self.accelerator.unwrap_model(self.model)
+
         self.model.eval()
         self.evaluation_metrics.reset()
         torch.cuda.empty_cache()
@@ -122,6 +122,7 @@ class Trainer(BaseTrainer):
                 batch_idx, batch, part
             )  # log only the last batch during inference
 
+        self.model = original_model
         return self.evaluation_metrics.result()
 
     def _log_batch(self, batch_idx, batch, mode="train"):
@@ -139,13 +140,14 @@ class Trainer(BaseTrainer):
         # method to log data from you batch
         # such as audio, text or images, for example
 
-        # logging scheme might be different for different partitions
-        if mode == "train":  # the method is called only every self.log_step steps
-            if self.log_audio:
-                self.writer.add_audio(audio_name='audio_sample_train', audio=batch['data_object'][0],
-                                      sample_rate=self.config.writer.sample_rate)
-        else:
-            # Log Stuff
-            if self.log_audio:
-                self.writer.add_audio(audio_name='audio_sample_eval', audio=batch['data_object'][0],
-                                      sample_rate=self.config.writer.sample_rate)
+        if self.accelerator.is_main_process:
+            # logging scheme might be different for different partitions
+            if mode == "train":  # the method is called only every self.log_step steps
+                if self.log_audio:
+                    self.writer.add_audio(audio_name='audio_sample_train', audio=batch['data_object'][0],
+                                          sample_rate=self.config.writer.sample_rate)
+            else:
+                # Log Stuff
+                if self.log_audio:
+                    self.writer.add_audio(audio_name='audio_sample_eval', audio=batch['data_object'][0],
+                                          sample_rate=self.config.writer.sample_rate)

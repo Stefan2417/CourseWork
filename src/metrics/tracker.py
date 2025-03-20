@@ -1,5 +1,6 @@
 import pandas as pd
-
+import torch
+import accelerate
 
 class MetricTracker:
     """
@@ -11,11 +12,14 @@ class MetricTracker:
         Args:
             *keys (list[str]): list (as positional arguments) of metric
                 names (may include the names of losses)
-            writer (WandBWriter | CometMLWriter | None): experiment tracker.
-                Not used in this code version. Can be used to log metrics
-                from each batch.
+            writer (WandBWriter): WandB experiment tracker with accelerator
         """
         self.writer = writer
+        if writer is not None:
+            self.accelerator = writer.accelerator
+        else:
+            raise ValueError("WandBWriter is required for this implementation of MetricTracker")
+
         self._data = pd.DataFrame(index=keys, columns=["total", "counts", "average"])
         self.reset()
 
@@ -35,11 +39,19 @@ class MetricTracker:
             value (float): metric value on the batch.
             n (int): how many times to count this value.
         """
-        # if self.writer is not None:
-        #     self.writer.add_scalar(key, value)
-        self._data.loc[key, "total"] += value * n
-        self._data.loc[key, "counts"] += n
-        self._data.loc[key, "average"] = self._data.total[key] / self._data.counts[key]
+        if not isinstance(value, torch.Tensor):
+            value_tensor = torch.tensor(value)
+        else:
+            value_tensor = value
+
+        gathered_value = self.accelerator.gather_for_metrics(value_tensor)
+
+        if self.accelerator.is_main_process:
+            mean_value = gathered_value.mean().item()
+            self._data.loc[key, "total"] += mean_value * n
+            self._data.loc[key, "counts"] += n
+            self._data.loc[key, "average"] = self._data.total[key] / self._data.counts[key]
+            self.writer.add_scalar(key, mean_value)
 
     def avg(self, key):
         """

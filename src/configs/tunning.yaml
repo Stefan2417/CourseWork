@@ -13,8 +13,9 @@ optimizer:
   lr: 1e-3
   weight_decay: 2e-5
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  eta_min: 1e-4
+  _target_: torch.optim.lr_scheduler.StepLR
+  step_size: 1
+  gamma: 0.97
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
   embed_dim: 256
@@ -22,10 +23,9 @@ loss_function:
 trainer:
   log_step: 100
   log_audio: False
-  n_epochs: 5
+  n_epochs: 4
   device_tensors: ["data_object", "labels", "lengths"] # which tensors should be on device (ex. GPU)
-  resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
-  device: auto # device name or "auto"
+  resume_from: "/home/stefan/Documents/CourseWork/data/saved/local_debug_accelerator_pretr_check/checkpoint-epoch2.pth" # null or path to the checkpoint dir with *.pth and config.yaml
   override: True # if True, will override the previous run with the same name
   monitor: "off" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
   save_period: 1 # checkpoint each save_period epochs in addition to the best epoch

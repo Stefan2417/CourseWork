@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 from src.metrics.base_metric import BaseMetric
+from accelerate import Accelerator
+
 logger = logging.getLogger(__name__)
 
 class EERMetric(BaseMetric):
@@ -15,13 +17,12 @@ class EERMetric(BaseMetric):
     def __init__(self,
                  name: str,
                  pairs_path: str,
-                 device: torch.device):
+                 accelerator : Accelerator):
         super().__init__(name=name)
         self.pairs = self._load_pairs(Path(pairs_path))
         self.can_cached = 0
-        if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.device = device
+        self.accelerator = accelerator
+        self.device = accelerator.device
         self.embeddings_cache: Dict[str, torch.Tensor] = {}
 
     def _load_pairs(self, path: Path) -> List[Tuple[int, str, str]]:
@@ -98,12 +99,6 @@ class EERMetric(BaseMetric):
         fnr = 1 - tpr
         eer_idx = np.nanargmin(np.abs(fpr - fnr))
         eer = (fpr[eer_idx] + fnr[eer_idx]) / 2
-
-        # plt.hist([s for s, l in zip(similarities, labels) if l == 1], alpha=0.5, label='Genuine')
-        # plt.hist([s for s, l in zip(similarities, labels) if l == 0], alpha=0.5, label='Impostor')
-        # plt.legend()
-        # plt.savefig("eer_distribution.png")  # Сохранит в рабочую директорию
-        # plt.close()  # Освободит память
 
         return eer
 

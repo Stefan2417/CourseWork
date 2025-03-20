@@ -10,6 +10,7 @@ from src.metrics.tracker import MetricTracker
 from src.utils.io_utils import ROOT_PATH
 
 
+
 class BaseTrainer:
     """
     Base class for all trainers.
@@ -17,6 +18,7 @@ class BaseTrainer:
 
     def __init__(
         self,
+        *,
         model,
         criterion,
         metrics,
@@ -63,7 +65,6 @@ class BaseTrainer:
         self.cfg_trainer = self.config.trainer
 
         self.log_audio = config.trainer.get("log_audio", False)
-        self.device = device
         self.skip_oom = skip_oom
 
         self.logger = logger
@@ -79,15 +80,28 @@ class BaseTrainer:
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
         self.scaler = scaler
+
         self.accelerator = accelerator
-        if accelerator is not None:
-            self.device = accelerator.device
+        self.device = accelerator.device
+
+        self.interrupted = False
+
+        self.lr_scheduler = self.accelerator.prepare(self.lr_scheduler)
+        self.optimizer = self.accelerator.prepare(self.optimizer)
+        self.criterion = self.accelerator.prepare(self.criterion)
+
+
+        self.accelerator.register_for_checkpointing(self.lr_scheduler)
+        self.accelerator.register_for_checkpointing(self.optimizer)
+        self.accelerator.register_for_checkpointing(self.criterion)
 
         self.logger.info(f'dataloaders: {dataloaders}')
+        self.logger.info(f'epoch_len: {epoch_len}')
 
 
         # define dataloaders
-        self.train_dataloader = dataloaders["train"]
+        self.train_dataloader = self.accelerator.prepare(dataloaders["train"])
+
         if epoch_len is None:
             # epoch-based training
             self.epoch_len = len(self.train_dataloader)
@@ -97,7 +111,9 @@ class BaseTrainer:
             self.epoch_len = epoch_len
 
         self.evaluation_dataloaders = {
-            k: v for k, v in dataloaders.items() if k != "train"
+            k: self.accelerator.prepare(v)
+            for k, v in dataloaders.items()
+            if k != "train"
         }
 
         # define epochs
@@ -133,14 +149,13 @@ class BaseTrainer:
         # define metrics
         self.metrics = metrics
 
-        self.logger.info('self.config.writer.loss_names:')
         self.logger.info(self.config.writer.loss_names)
 
         self.train_metrics = MetricTracker(
             *self.config.writer.loss_names,
             "grad_norm",
             *[m.name for m in self.metrics["train"]],
-            writer=self.writer,
+            writer=self.writer
         )
         # self.evaluation_metrics = MetricTracker(
         #     *[m.name for m in self.metrics["inference"]],
@@ -149,8 +164,11 @@ class BaseTrainer:
 
         self.evaluation_metrics = MetricTracker(
             *[m.name for m in self.metrics["train_inference"]],
-            writer=self.writer,
+            writer=self.writer
         )
+
+        self.train_metrics = accelerator.prepare(self.train_metrics)
+        self.evaluation_metrics = accelerator.prepare(self.evaluation_metrics)
 
         # define checkpoint dir and init everything if required
 
@@ -172,9 +190,19 @@ class BaseTrainer:
         try:
             self._train_process()
         except KeyboardInterrupt as e:
-            self.logger.info("Saving model on keyboard interrupt")
-            self._save_checkpoint(self._last_epoch, save_best=False)
-            raise e
+            self.logger.info("train was interrupted by keyboard")
+            self.accelerator.set_trigger()
+            self.interrupted = True
+        except Exception as e:
+            self.logger.info(f"train was interrupted by {str(e)}")
+            self.accelerator.set_trigger()
+            self.interrupted = True
+        finally:
+            if self.interrupted or self.accelerator.check_trigger():
+                self.logger.info("train was interrupted, save checkpoint")
+                self._save_checkpoint(self._last_epoch, save_best=False, interrupted=True)
+                torch.cuda.empty_cache()
+                self.accelerator.end_training()
 
     def _train_process(self):
         """
@@ -192,6 +220,9 @@ class BaseTrainer:
             # save logged information into logs dict
             logs = {"epoch": epoch}
             logs.update(result)
+
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
 
             # print logged information to the screen
             for key, value in logs.items():
@@ -220,6 +251,8 @@ class BaseTrainer:
             logs (dict): logs that contain the average loss and metric in
                 this epoch.
         """
+
+        self.accelerator.wait_for_everyone()
         self.is_train = True
         self.model.train()
         self.train_metrics.reset()
@@ -231,8 +264,17 @@ class BaseTrainer:
         self.writer.add_scalar("epoch", epoch)
 
         for batch_idx, batch in enumerate(
-            tqdm(self.train_dataloader, desc="train", total=self.epoch_len)
+            tqdm(self.train_dataloader, desc="train", total=self.epoch_len,
+                 disable=not self.accelerator.is_local_main_process
+                 )
         ):
+
+            if self.accelerator.check_trigger():
+                self.logger.info("An interrupt signal from another process has been detected")
+                self.interrupted = True
+                torch.cuda.empty_cache()
+                break
+
             try:
                 batch = self.process_batch(
                     batch,
@@ -250,13 +292,9 @@ class BaseTrainer:
             self.train_metrics.update("grad_norm", self._get_grad_norm())
 
             # log current results
-            if batch_idx % self.log_step == 0:
+            if batch_idx % self.log_step == 0 and self.accelerator.is_main_process:
                 self.writer.set_step(self.cur_step)
-                # self.logger.debug(
-                #     "Train Epoch: {} {} Loss: {:.6f}".format(
-                #         epoch, self._progress(batch_idx), batch["loss"].item()
-                #     )
-                # )
+
                 self.writer.add_scalar(
                     "learning rate", self.lr_scheduler.get_last_lr()[0]
                 )
@@ -275,7 +313,7 @@ class BaseTrainer:
         for part, dataloader in self.evaluation_dataloaders.items():
             val_logs = self._evaluation_epoch(epoch, part, dataloader)
             logs.update(**{f"{part}_{name}": value for name, value in val_logs.items()})
-
+        self.accelerator.wait_for_everyone()
         return logs
 
     def _evaluation_epoch(self, epoch, part, dataloader):
@@ -289,27 +327,7 @@ class BaseTrainer:
         Returns:
             logs (dict): logs that contain the information about evaluation.
         """
-        self.is_train = False
-        self.model.eval()
-        self.evaluation_metrics.reset()
-        torch.cuda.empty_cache()
-        with torch.no_grad():
-            for batch_idx, batch in tqdm(
-                enumerate(dataloader),
-                desc=part,
-                total=len(dataloader),
-            ):
-                batch = self.process_batch(
-                    batch,
-                    metrics=self.evaluation_metrics,
-                )
-            self.writer.set_step(self.cur_step, part)
-            self._log_scalars(self.evaluation_metrics)
-            self._log_batch(
-                batch_idx, batch, part
-            )  # log only the last batch during inference
-
-        return self.evaluation_metrics.result()
+        pass
 
     def _monitor_performance(self, logs, not_improved_count):
         """
@@ -482,12 +500,14 @@ class BaseTrainer:
         Args:
             metric_tracker (MetricTracker): calculated metrics.
         """
+
         if self.writer is None:
             return
+
         for metric_name in metric_tracker.keys():
             self.writer.add_scalar(f"{metric_name}", metric_tracker.avg(metric_name))
 
-    def _save_checkpoint(self, epoch, save_best=False, only_best=False):
+    def _save_checkpoint(self, epoch, save_best=False, only_best=False, interrupted=False):
         """
         Save the checkpoints.
 
@@ -498,34 +518,36 @@ class BaseTrainer:
                 'model_best.pth'(do not duplicate the checkpoint as
                 checkpoint-epochEpochNumber.pth)
         """
-        arch = type(self.model).__name__
-        state = {}
-        if self.accelerator is not None:
-            if not self.accelerator.is_main_process:
-                return
-            unwrapped_model = self.accelerator.unwrap_model(self.model)
 
-            state = {
-                "arch": arch,
-                "epoch": epoch,
-                "state_dict": unwrapped_model.state_dict(),
-                "optimizer": self.optimizer.state_dict(),
-                "lr_scheduler": self.lr_scheduler.state_dict(),
-                "monitor_best": self.mnt_best,
-                "config": self.config,
-                "cur_step": self.cur_step,
-            }
-        else:
-            state = {
-                "arch": arch,
-                "epoch": epoch,
-                "state_dict": self.model.state_dict(),
-                "optimizer": self.optimizer.state_dict(),
-                "lr_scheduler": self.lr_scheduler.state_dict(),
-                "monitor_best": self.mnt_best,
-                "config": self.config,
-                "cur_step": self.cur_step,
-            }
+        self.accelerator.wait_for_everyone()
+
+        if not self.accelerator.is_main_process:
+            return
+
+
+        arch = type(self.model).__name__
+        unwrapped_model = self.accelerator.unwrap_model(self.model)
+
+        state = {
+            "arch": arch,
+            "epoch": epoch,
+            "state_dict": unwrapped_model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "lr_scheduler": self.lr_scheduler.state_dict(),
+            "monitor_best": self.mnt_best,
+            "config": self.config,
+            "cur_step": self.cur_step,
+            "loss_function": self.criterion.state_dict(),
+        }
+
+        if interrupted:
+            filename = str(self.checkpoint_dir / "checkpoint-interrupted.pth")
+            self.logger.info(f"Saving checkpoint: {filename} ...")
+            torch.save(state, filename)
+            if self.config.writer.log_checkpoints:
+                self.writer.add_checkpoint(filename, str(self.checkpoint_dir.parent))
+            return
+
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):
             torch.save(state, filename)
@@ -564,17 +586,15 @@ class BaseTrainer:
                 "Warning: Architecture configuration given in the config file is different from that "
                 "of the checkpoint. This may yield an exception when state_dict is loaded."
             )
-        if self.accelerator is not None:
-            # Get the unwrapped model to load state dict
-            unwrapped_model = self.accelerator.unwrap_model(self.model)
-            unwrapped_model.load_state_dict(checkpoint["state_dict"])
-        else:
-            self.model.load_state_dict(checkpoint["state_dict"])
+        # Get the unwrapped model to load state dict
+        unwrapped_model = self.accelerator.unwrap_model(self.model)
+        unwrapped_model.load_state_dict(checkpoint["state_dict"])
 
         # load optimizer state from checkpoint only when optimizer type is not changed.
         if (
             checkpoint["config"]["optimizer"] != self.config["optimizer"]
             or checkpoint["config"]["lr_scheduler"] != self.config["lr_scheduler"]
+            or checkpoint["config"]["loss_function"] != self.config["loss_function"]
         ):
             self.logger.warning(
                 "Warning: Optimizer or lr_scheduler given in the config file is different "
@@ -584,6 +604,7 @@ class BaseTrainer:
         else:
             self.optimizer.load_state_dict(checkpoint["optimizer"])
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+            self.criterion.load_state_dict(checkpoint["loss_function"])
 
         self.logger.info(
             f"Checkpoint loaded. Resume training from epoch {self.start_epoch}"
@@ -609,16 +630,10 @@ class BaseTrainer:
         checkpoint = torch.load(pretrained_path, self.device)
 
         if checkpoint.get("state_dict") is not None:
-            if self.accelerator is not None:
-                # Get the unwrapped model to load state dict
-                unwrapped_model = self.accelerator.unwrap_model(self.model)
-                unwrapped_model.load_state_dict(checkpoint["state_dict"])
-            else:
-                self.model.load_state_dict(checkpoint["state_dict"])
+            # Get the unwrapped model to load state dict
+            unwrapped_model = self.accelerator.unwrap_model(self.model)
+            unwrapped_model.load_state_dict(checkpoint["state_dict"])
         else:
-            if self.accelerator is not None:
-                # Get the unwrapped model to load state dict
-                unwrapped_model = self.accelerator.unwrap_model(self.model)
-                unwrapped_model.load_state_dict(checkpoint)
-            else:
-                self.model.load_state_dict(checkpoint)
+            # Get the unwrapped model to load state dict
+            unwrapped_model = self.accelerator.unwrap_model(self.model)
+            unwrapped_model.load_state_dict(checkpoint)
