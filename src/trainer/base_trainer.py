@@ -185,6 +185,9 @@ class BaseTrainer:
             self._last_epoch = epoch
             result = self._train_epoch(epoch)
 
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
+
             # save logged information into logs dict
             logs = {"epoch": epoch}
             logs.update(result)

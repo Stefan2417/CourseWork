@@ -9,20 +9,21 @@ defaults:
   - transforms: transforms_v1
   - _self_
 optimizer:
-  _target_: torch.optim.AdamW
+  _target_: torch.optim.Adam
   lr: 1e-3
   weight_decay: 2e-5
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  eta_min: 1e-4
+  _target_: torch.optim.lr_scheduler.StepLR
+  step_size: 1
+  gamma: 0.97
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
   embed_dim: 256
   num_classes: 5994
 trainer:
-  log_step: 1
-  log_audio: True
-  n_epochs: 1
+  log_step: 100
+  log_audio: False
+  n_epochs: 10
   device_tensors: ["data_object", "labels", "lengths"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"

@@ -2,7 +2,7 @@
 #SBATCH --job-name=train_model            # Название задачи
 #SBATCH --error=task-%j.err        # Файл для вывода ошибок
 #SBATCH --output=task-%j.log       # Файл для вывода результатов
-#SBATCH --time=100:00:00            # Максимальное время выполнения
+#SBATCH --time=200:00:00            # Максимальное время выполнения
 #SBATCH --nodes=1                  # Требуемое кол-во узлов
 #SBATCH --gpus=1                   # Требуемое кол-во GPU
 #SBATCH --cpus-per-task=4          # Требуемое кол-во CPU
