@@ -507,6 +507,7 @@ class BaseTrainer:
             "monitor_best": self.mnt_best,
             "config": self.config,
             "cur_step": self.cur_step,
+            "loss_function" : self.criterion.state_dict(),
         }
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):
@@ -551,7 +552,8 @@ class BaseTrainer:
         # load optimizer state from checkpoint only when optimizer type is not changed.
         if (
             checkpoint["config"]["optimizer"] != self.config["optimizer"]
-            or checkpoint["config"]["lr_scheduler"] != self.config["lr_scheduler"]
+            or checkpoint["config"]["lr_scheduler"] != self.config["lr_scheduler"] or
+            checkpoint["config"]["loss_function"] != self.config["loss_function"]
         ):
             self.logger.warning(
                 "Warning: Optimizer or lr_scheduler given in the config file is different "
@@ -561,6 +563,7 @@ class BaseTrainer:
         else:
             self.optimizer.load_state_dict(checkpoint["optimizer"])
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+            self.lr_scheduler.load_state_dict(checkpoint["loss_function"])
 
         self.logger.info(
             f"Checkpoint loaded. Resume training from epoch {self.start_epoch}"
