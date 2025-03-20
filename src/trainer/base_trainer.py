@@ -31,6 +31,7 @@ class BaseTrainer:
         skip_oom=True,
         batch_transforms=None,
         scaler=None,
+        accelerator=None,
     ):
         """
         Args:
@@ -78,6 +79,9 @@ class BaseTrainer:
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
         self.scaler = scaler
+        self.accelerator = accelerator
+        if accelerator is not None:
+            self.device = accelerator.device
 
         self.logger.info(f'dataloaders: {dataloaders}')
 
@@ -495,16 +499,33 @@ class BaseTrainer:
                 checkpoint-epochEpochNumber.pth)
         """
         arch = type(self.model).__name__
-        state = {
-            "arch": arch,
-            "epoch": epoch,
-            "state_dict": self.model.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-            "lr_scheduler": self.lr_scheduler.state_dict(),
-            "monitor_best": self.mnt_best,
-            "config": self.config,
-            "cur_step": self.cur_step,
-        }
+        state = {}
+        if self.accelerator is not None:
+            if not self.accelerator.is_main_process:
+                return
+            unwrapped_model = self.accelerator.unwrap_model(self.model)
+
+            state = {
+                "arch": arch,
+                "epoch": epoch,
+                "state_dict": unwrapped_model.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+                "lr_scheduler": self.lr_scheduler.state_dict(),
+                "monitor_best": self.mnt_best,
+                "config": self.config,
+                "cur_step": self.cur_step,
+            }
+        else:
+            state = {
+                "arch": arch,
+                "epoch": epoch,
+                "state_dict": self.model.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+                "lr_scheduler": self.lr_scheduler.state_dict(),
+                "monitor_best": self.mnt_best,
+                "config": self.config,
+                "cur_step": self.cur_step,
+            }
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):
             torch.save(state, filename)
@@ -543,7 +564,12 @@ class BaseTrainer:
                 "Warning: Architecture configuration given in the config file is different from that "
                 "of the checkpoint. This may yield an exception when state_dict is loaded."
             )
-        self.model.load_state_dict(checkpoint["state_dict"])
+        if self.accelerator is not None:
+            # Get the unwrapped model to load state dict
+            unwrapped_model = self.accelerator.unwrap_model(self.model)
+            unwrapped_model.load_state_dict(checkpoint["state_dict"])
+        else:
+            self.model.load_state_dict(checkpoint["state_dict"])
 
         # load optimizer state from checkpoint only when optimizer type is not changed.
         if (
@@ -583,6 +609,16 @@ class BaseTrainer:
         checkpoint = torch.load(pretrained_path, self.device)
 
         if checkpoint.get("state_dict") is not None:
-            self.model.load_state_dict(checkpoint["state_dict"])
+            if self.accelerator is not None:
+                # Get the unwrapped model to load state dict
+                unwrapped_model = self.accelerator.unwrap_model(self.model)
+                unwrapped_model.load_state_dict(checkpoint["state_dict"])
+            else:
+                self.model.load_state_dict(checkpoint["state_dict"])
         else:
-            self.model.load_state_dict(checkpoint)
+            if self.accelerator is not None:
+                # Get the unwrapped model to load state dict
+                unwrapped_model = self.accelerator.unwrap_model(self.model)
+                unwrapped_model.load_state_dict(checkpoint)
+            else:
+                self.model.load_state_dict(checkpoint)

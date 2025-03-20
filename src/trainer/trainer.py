@@ -67,8 +67,10 @@ class Trainer(BaseTrainer):
             if self.is_train:
                 all_losses = self.criterion(batch)
                 batch.update(all_losses)
-
-                batch["loss"].backward()  # sum of all losses is always called loss
+                if self.accelerator is not None:
+                    self.accelerator.backward(batch["loss"])
+                else:
+                    batch["loss"].backward()  # sum of all losses is always called loss
                 self._clip_grad_norm()
                 self.optimizer.step()
                 if self.lr_scheduler is not None:

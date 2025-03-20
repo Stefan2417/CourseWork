@@ -11,6 +11,7 @@ from omegaconf import OmegaConf
 from src.datasets.data_utils import get_dataloaders
 from src.trainer import Trainer
 from src.utils.init_utils import set_random_seed, setup_saving_and_logging
+from accelerate import Accelerator
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -25,7 +26,7 @@ def main(config):
     Args:
         config (DictConfig): hydra experiment config.
     """
-    os.environ["WANDB_API_KEY"] = "8dd6bf64e54bcd000df67566620fe0a54f6ce31a" #TODO - delete token
+    os.environ["WANDB_API_KEY"] = "8dd6bf64e54bcd000df67566620fe0a54f6ce31a"  # TODO - delete token
     set_random_seed(config.trainer.seed)
 
     project_config = OmegaConf.to_container(config)
@@ -36,6 +37,11 @@ def main(config):
         device = "cuda" if torch.cuda.is_available() else "cpu"
     else:
         device = config.trainer.device
+
+    accelerator = None
+    if config.trainer.get('accelerator', False):
+        accelerator = Accelerator()
+        device = accelerator.device
 
     # setup data_loader instances
     # batch_transforms should be put on device
@@ -58,8 +64,12 @@ def main(config):
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer, T_max=total_length) #TODO epoch_len
+    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer, T_max=total_length)  # TODO epoch_len
     scaler = torch.GradScaler()
+
+    if accelerator is not None:
+        model, optimizer, dataloaders['train'], lr_scheduler = accelerator.prepare(model, optimizer,
+                                                                                   dataloaders['train'], lr_scheduler)
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
@@ -79,7 +89,8 @@ def main(config):
         writer=writer,
         batch_transforms=batch_transforms,
         skip_oom=config.trainer.get("skip_oom", True),
-        scaler=scaler
+        scaler=scaler,
+        accelerator=accelerator,
     )
 
     trainer.train()
