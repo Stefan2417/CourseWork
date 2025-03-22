@@ -6,12 +6,12 @@ from transformers import Wav2Vec2BertForXVector
 logger = logging.getLogger(__name__)
 
 
-class Wav2vecBert2(nn.Module):
+class Wav2vecBert2Base(nn.Module):
     """
 
     """
 
-    def __init__(self, pretrain):
+    def __init__(self, pretrain="facebook/w2v-bert-2.0"):
         super().__init__()
 
         self.w2v = Wav2Vec2BertForXVector.from_pretrained(pretrain)

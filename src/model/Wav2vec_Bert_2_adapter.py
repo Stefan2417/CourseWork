@@ -8,12 +8,12 @@ from speechbrain.lobes.models.ECAPA_TDNN import BatchNorm1d
 logger = logging.getLogger(__name__)
 
 
-class Wav2vecBert2(nn.Module):
+class Wav2vecBert2Adapter(nn.Module):
     """
 
     """
 
-    def __init__(self, pretrain, emb_dim, freeze_strategy="none", layers=None):
+    def __init__(self, emb_dim, pretrain="facebook/w2v-bert-2.0", freeze_strategy="none", layers=None):
         super().__init__()
 
         self.w2v = Wav2Vec2BertModel.from_pretrained(
@@ -63,6 +63,8 @@ class Wav2vecBert2(nn.Module):
         )
 
         hidden_states = encoder_outputs.hidden_states
+
+        hidden_states = hidden_states.permute(2, 0, 1)
 
         selected_features = [hidden_states[layer_idx + 1] for layer_idx in self.selected_layers]
 
