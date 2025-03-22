@@ -46,8 +46,7 @@ class Trainer(BaseTrainer):
                 self._clip_grad_norm()
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
-                if self.lr_scheduler is not None:
-                    self.lr_scheduler.step()
+
                 for loss_name in self.config.writer.loss_names:
                     metrics.update(loss_name, batch[loss_name].item())
 
@@ -71,6 +70,10 @@ class Trainer(BaseTrainer):
                 batch["loss"].backward()  # sum of all losses is always called loss
                 self._clip_grad_norm()
                 self.optimizer.step()
+
+                if self.batch_scheduler and self.lr_scheduler is not None:
+                    self.lr_scheduler.step()
+
                 for loss_name in self.config.writer.loss_names:
                     metrics.update(loss_name, batch[loss_name].item())
 

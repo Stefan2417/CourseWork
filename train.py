@@ -58,7 +58,7 @@ def main(config):
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer) #TODO epoch_len
+    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer, T_max=total_length) #TODO epoch_len
     scaler = torch.GradScaler()
 
     # epoch_len = number of iterations for iteration-based training

@@ -68,6 +68,7 @@ class BaseTrainer:
         self.logger = logger
         self.log_step = config.trainer.get("log_step", 50)
         self.log_evaluation = config.trainer.get("log_evaluation", 10**9)
+        self.batch_scheduler = config.trainer.get("batch_scheduler", True)
 
         self.cur_step = 0
         self.use_amp_autocast = config.trainer.get("use_amp_autocast", False)
@@ -185,7 +186,7 @@ class BaseTrainer:
             self._last_epoch = epoch
             result = self._train_epoch(epoch)
 
-            if self.lr_scheduler is not None:
+            if (not self.batch_scheduler) and self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
             # save logged information into logs dict
