@@ -13,7 +13,6 @@ class Wav2vecBert2Base(nn.Module):
 
     def __init__(self, pretrain="facebook/w2v-bert-2.0"):
         super().__init__()
-
         self.w2v = Wav2Vec2BertForXVector.from_pretrained(pretrain)
 
     def forward(self, batch):
@@ -21,14 +20,9 @@ class Wav2vecBert2Base(nn.Module):
 
         """
 
-        padded_length = batch['data_object'].shape[1]
-        attention_mask = (torch.arange(padded_length)[None, :] < batch['lengths'][:, None]).long()
-
         embeddings = self.w2v.encode(
             input_features=batch['data_object'],
-            attention_mask=attention_mask,
-            output_hidden_states=True
+            attention_mask=batch['lengths'],
         ).embeddings
-
 
         return {"embeddings": embeddings}

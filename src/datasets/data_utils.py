@@ -2,7 +2,6 @@ from itertools import repeat
 
 from hydra.utils import instantiate
 
-from src.datasets.collate import collate_fn
 from src.utils.init_utils import set_worker_seed
 import os
 import tqdm
@@ -69,7 +68,7 @@ def get_dataloaders(config, device):
         partition_dataloader = instantiate(
             config.dataloader,
             dataset=dataset,
-            collate_fn=collate_fn,
+            collate_fn=config.dataloader.collate_fn,
             worker_init_fn=set_worker_seed,
             drop_last=(dataset_partition == "train"),
             shuffle=(dataset_partition == "train"),

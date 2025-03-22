@@ -1,0 +1,16 @@
+train:
+  data_object: # name of the tensor on which we apply transform
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.AudioSizeNormalize
+      - _target_: src.transforms.InstanceAugment
+#        musan_path: "/home/stefan/Documents/CourseWork/MUSAN/musan/"
+#        rir_path: "/home/stefan/Documents/CourseWork/RIRS_NOISES/"
+        musan_path: "/home/stankuznetsov/CourseWork/MUSAN/musan"
+        rir_path: "/home/stankuznetsov/CourseWork/RIRS/musan"
+
+inference:
+  data_object: # name of the tensor on which we apply transform
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.AudioSizeNormalize

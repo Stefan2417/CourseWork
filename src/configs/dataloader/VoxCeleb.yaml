@@ -3,3 +3,6 @@ num_workers: 4
 pin_memory: True
 batch_size: 16
 prefetch_factor: 4
+collate_fn:
+    _target_: src.datasets.collate.CollateW2V
+#    _target_: src.datasets.collate.collate_fn

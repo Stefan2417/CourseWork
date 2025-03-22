@@ -1,7 +1,6 @@
 defaults:
-  - model: xeus_dummy_adapter
+  - model: wav2vec_bert_2_base
   - datasets: VoxCeleb1 # we do not want to run inference on training data
-  - sampler: dynamic_sampler
   - dataloader: VoxCeleb
   - transforms: transforms_v1
   - metrics: voxceleb_metrics
@@ -9,7 +8,7 @@ defaults:
 inferencer:
   device_tensors: ["data_object", "labels", 'lengths'] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
-  save_path: "save_embeddings_xeus_dummy" # any name here, can be a dataset name
+  save_path: "w2v" # any name here, can be a dataset name
   seed: 1
   skip_model_load: True
   from_pretrained: null # path to the pretrained model
