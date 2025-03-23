@@ -7,26 +7,30 @@ from transformers import AutoFeatureExtractor
 
 logger = logging.getLogger(__name__)
 
-def collate_fn(dataset_items: list[dict]):
-    waveforms, labels, lengths, names = [], [], [], []
+class Collate(nn.Module):
+    def __init__(self):
+        super().__init__()
 
-    for item in dataset_items:
-        waveforms.append(item["data_object"])
-        labels.append(item["label"])
-        lengths.append(item['length'])
-        names.append(item["name"])
+    def forward(self, dataset_items: list[dict]):
+        waveforms, labels, lengths, names = [], [], [], []
 
-    labels = torch.LongTensor(labels)
-    lengths = torch.LongTensor(lengths)
+        for item in dataset_items:
+            waveforms.append(item["data_object"])
+            labels.append(item["label"])
+            lengths.append(item['length'])
+            names.append(item["name"])
 
-    padded_waveforms = pad_sequence(waveforms, batch_first=True)
+        labels = torch.LongTensor(labels)
+        lengths = torch.LongTensor(lengths)
 
-    return {
-        "data_object": padded_waveforms,
-        "labels": labels,
-        "lengths": lengths,
-        "names" : names
-    }
+        padded_waveforms = pad_sequence(waveforms, batch_first=True)
+
+        return {
+            "data_object": padded_waveforms,
+            "labels": labels,
+            "lengths": lengths,
+            "names": names
+        }
 
 class CollateW2V(nn.Module):
     def __init__(self):
@@ -34,13 +38,15 @@ class CollateW2V(nn.Module):
         self.extractor = AutoFeatureExtractor.from_pretrained("facebook/w2v-bert-2.0")
 
     def forward(self, dataset_items: list[dict]):
-        waveforms, labels, lengths, names = [], [], [], []
+        waveforms, labels, names = [], [], []
         for item in dataset_items:
             waveforms.append(item["data_object"])
             labels.append(item["label"])
             names.append(item["name"])
 
         extracted = self.extractor(waveforms, sampling_rate=16000, return_tensors="pt", padding=True)
+        labels = torch.LongTensor(labels)
+
         return {
             "data_object" : extracted['input_features'],
             "lengths" : extracted['attention_mask'],

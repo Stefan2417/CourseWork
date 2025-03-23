@@ -1,5 +1,5 @@
 defaults:
-  - model: xeus_fine-tunning
+  - model: wav2vec_bert_2_base.yaml
   - writer: wandb
   - metrics: voxceleb_metrics
   - datasets:
@@ -10,19 +10,19 @@ defaults:
   - _self_
 optimizer:
   _target_: torch.optim.Adam
-  lr: 1e-5
+  lr: 1e-3
   weight_decay: 2e-5
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  eta_min: 1e-6
+  eta_min: 1e-4
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
-  embed_dim: 256
+  embed_dim: 512
   num_classes: 5994
 trainer:
   log_step: 100
   log_audio: False
-  n_epochs: 2
+  n_epochs: 5
   device_tensors: ["data_object", "labels", "lengths"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
@@ -33,4 +33,3 @@ trainer:
   save_dir: "data/saved"
   seed: 1
   use_amp_autocast: False
-  from_pretrained: '/home/stankuznetsov/CourseWork/pretrained_checkpoints/adapter_training_v2.1.pth'

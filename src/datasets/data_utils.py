@@ -56,6 +56,7 @@ def get_dataloaders(config, device):
     datasets = instantiate(config.datasets)
     dataloaders = {}
     logger.info('get dataloaders')
+    collate_fn = instantiate(config.dataloader.collate_fn)
 
     for dataset_partition in config.datasets.keys():
         dataset = datasets[dataset_partition]
@@ -68,7 +69,7 @@ def get_dataloaders(config, device):
         partition_dataloader = instantiate(
             config.dataloader,
             dataset=dataset,
-            collate_fn=config.dataloader.collate_fn,
+            collate_fn=collate_fn,
             worker_init_fn=set_worker_seed,
             drop_last=(dataset_partition == "train"),
             shuffle=(dataset_partition == "train"),

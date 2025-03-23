@@ -31,11 +31,28 @@ class InstanceAugment(torch.nn.Module):
             self.rir_files = glob.glob(os.path.join(str(rir_path), '*/*.wav'))
         print(self.noise_list.keys())
 
-    def add_rev(self, audio):
+    # def add_rev(self, audio):
+    #     """
+    #     Add reverberation with rirs files
+    #     """
+    #     if not self.rir_files:
+    #         return audio
+    #
+    #     assert audio.device == torch.device('cpu')
+    #     audio_length = audio.shape[0]
+    #
+    #     rir_file = random.choice(self.rir_files)
+    #     rir, sr = soundfile.read(rir_file)
+    #     if sr != 16000 or len(rir.shape) > 1:
+    #         return audio
+    #     rir = rir[:audio_length]
+    #     rir = rir / np.sqrt(np.sum(rir ** 2))
+    #     res = signal.convolve(audio.numpy(), rir, mode='full')[:audio_length]
+    #     return torch.from_numpy(res.astype(np.float32))
+    def add_rev(self, audio, intensity=0.7):
         """
-        Add reverberation with rirs files
+        Add reverberation with rirs files with controllable intensity
         """
-
         if not self.rir_files:
             return audio
 
@@ -44,13 +61,21 @@ class InstanceAugment(torch.nn.Module):
 
         rir_file = random.choice(self.rir_files)
         rir, sr = soundfile.read(rir_file)
+        if sr != 16000 or len(rir.shape) > 1:
+            return audio
 
-        if len(rir.shape) > 1:
-            rir = np.mean(rir, axis=1)
+        peak_idx = np.argmax(np.abs(rir))
+        significant_length = min(int(0.3 * sr), len(rir) - peak_idx)
+        rir_trimmed = rir[peak_idx:peak_idx + significant_length]
 
-        rir = rir / np.sqrt(np.sum(rir ** 2))
-        res = signal.convolve(audio.numpy(), rir, mode='full')[:audio_length]
-        return torch.from_numpy(res.astype(np.float32))
+        rir_trimmed = rir_trimmed / np.sqrt(np.sum(rir_trimmed ** 2)) * intensity
+
+        processed = signal.convolve(audio.numpy(), rir_trimmed, mode='full')[:audio_length]
+        processed = torch.from_numpy(processed.astype(np.float32))
+        wet_dry_ratio = random.uniform(0.3, 0.7)
+        result = wet_dry_ratio * processed + (1 - wet_dry_ratio) * audio
+
+        return result
 
     def add_noise(self, audio, noise_cat):
         """
