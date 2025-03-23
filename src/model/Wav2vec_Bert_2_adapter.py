@@ -19,9 +19,6 @@ class Wav2vecBert2Adapter(nn.Module):
         self.w2v = Wav2Vec2BertModel.from_pretrained(
             pretrain,
         )
-        self.processor = Wav2Vec2BertProcessor.from_pretrained(pretrain)
-
-
 
         assert layers is not None
 
@@ -45,26 +42,20 @@ class Wav2vecBert2Adapter(nn.Module):
             pass
         if freeze_strategy == "all":
             for param in self.w2v.parameters():
-                param.requires_grad_(False)
+                param.requires_grad = False
 
     def forward(self, batch):
         """
 
         """
 
-        padded_length = batch['data_object'].shape[1]
-        attention_mask = (torch.arange(padded_length)[None, :] < batch['lengths'][:, None]).long()
-
-
-        encoder_outputs = self.w2v.encode(
+        encoder_outputs = self.w2v(
             input_features=batch['data_object'],
-            attention_mask=attention_mask,
+            attention_mask=batch['lengths'],
             output_hidden_states=True
         )
 
         hidden_states = encoder_outputs.hidden_states
-
-        hidden_states = hidden_states.permute(2, 0, 1)
 
         selected_features = [hidden_states[layer_idx + 1] for layer_idx in self.selected_layers]
 
