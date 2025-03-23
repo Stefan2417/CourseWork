@@ -1,2 +1,0 @@
-_target_: src.model.XeusEmbedder
-pretrain: '/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth'

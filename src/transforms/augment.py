@@ -49,6 +49,7 @@ class InstanceAugment(torch.nn.Module):
     #     rir = rir / np.sqrt(np.sum(rir ** 2))
     #     res = signal.convolve(audio.numpy(), rir, mode='full')[:audio_length]
     #     return torch.from_numpy(res.astype(np.float32))
+
     def add_rev(self, audio, intensity=0.7):
         """
         Add reverberation with rirs files with controllable intensity

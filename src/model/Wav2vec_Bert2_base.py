@@ -11,9 +11,9 @@ class Wav2vecBert2Base(nn.Module):
 
     """
 
-    def __init__(self, pretrain="facebook/w2v-bert-2.0"):
+    def __init__(self, pretrained):
         super().__init__()
-        self.w2v = Wav2Vec2BertForXVector.from_pretrained(pretrain)
+        self.w2v = Wav2Vec2BertForXVector.from_pretrained('facebook/w2v-bert-2.0', cache_dir=pretrained)
         for param in self.w2v.parameters():
             param.requires_grad = False
 

@@ -33,9 +33,9 @@ class Collate(nn.Module):
         }
 
 class CollateW2V(nn.Module):
-    def __init__(self):
+    def __init__(self, pretrained):
         super().__init__()
-        self.extractor = AutoFeatureExtractor.from_pretrained("facebook/w2v-bert-2.0")
+        self.extractor = AutoFeatureExtractor.from_pretrained('facebook/w2v-bert-2.0', cache_dir=pretrained)
 
     def forward(self, dataset_items: list[dict]):
         waveforms, labels, names = [], [], []
@@ -43,7 +43,6 @@ class CollateW2V(nn.Module):
             waveforms.append(item["data_object"])
             labels.append(item["label"])
             names.append(item["name"])
-
         extracted = self.extractor(waveforms, sampling_rate=16000, return_tensors="pt", padding=True)
         labels = torch.LongTensor(labels)
 
@@ -51,5 +50,5 @@ class CollateW2V(nn.Module):
             "data_object" : extracted['input_features'],
             "lengths" : extracted['attention_mask'],
             "labels": labels,
-            "names": names,
+            "names": names
         }

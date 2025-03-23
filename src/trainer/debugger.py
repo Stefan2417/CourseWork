@@ -126,9 +126,9 @@ class Debugger(BaseTrainer):
                         desc=part,
                         total=len(dataloader),
                 ):
-                    # self.process_batch(
-                    #     batch=batch
-                    # )
+                    self.process_batch(
+                        batch=batch
+                    )
 
                     self._log_batch(batch_idx, batch)
 

@@ -47,6 +47,8 @@ def main(config):
     model = instantiate(config.model).to(device)
     # logger.info(model)
 
+    logger.info('instantiate model')
+
     # get function handles of loss and metrics
     loss_function = instantiate(config.loss_function).to(device)
     metrics = instantiate(config.metrics)

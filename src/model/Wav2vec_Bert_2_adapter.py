@@ -13,12 +13,13 @@ class Wav2vecBert2Adapter(nn.Module):
 
     """
 
-    def __init__(self, emb_dim, pretrain="facebook/w2v-bert-2.0", freeze_strategy="none", layers=None):
+    def __init__(self, emb_dim, pretrained, freeze_strategy="none", layers=None):
         super().__init__()
 
         self.w2v = Wav2Vec2BertModel.from_pretrained(
-            pretrain,
+            'facebook/w2v-bert-2.0', cache_dir=pretrained
         )
+
 
         assert layers is not None
 
@@ -55,7 +56,7 @@ class Wav2vecBert2Adapter(nn.Module):
             output_hidden_states=True
         )
 
-        hidden_states = encoder_outputs.hidden_states
+        hidden_states = encoder_outputs.hidden_states[1:]
 
         selected_features = [hidden_states[layer_idx + 1] for layer_idx in self.selected_layers]
 
@@ -65,7 +66,7 @@ class Wav2vecBert2Adapter(nn.Module):
 
         asp_input = normalized.permute(0, 2, 1)
 
-        pooled = self.asp(asp_input, lengths=batch['lengths'])
+        pooled = self.asp(asp_input)
 
         embeddings = self.head(pooled.squeeze(-1))
 

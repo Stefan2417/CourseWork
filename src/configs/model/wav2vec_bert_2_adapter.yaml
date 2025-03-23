@@ -1,0 +1,5 @@
+_target_: src.model.Wav2vecBert2Adapter
+layers: [11, 12, 13, 14, 15, 16, 17]
+emb_dim: 512
+freeze_strategy: 'all'
+pretrained: '/home/stefan/Documents/CourseWork/pretrained/'

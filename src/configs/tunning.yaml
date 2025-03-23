@@ -1,5 +1,5 @@
 defaults:
-  - model: wav2vec_bert_2_base.yaml
+  - model: wav2vec_bert_2_adapter
   - writer: wandb
   - metrics: voxceleb_metrics
   - datasets:

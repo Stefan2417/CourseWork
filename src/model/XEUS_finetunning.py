@@ -3,7 +3,6 @@ import logging
 from torch import nn
 import torch
 from speechbrain.lobes.models.ECAPA_TDNN import AttentiveStatisticsPooling
-from speechbrain.lobes.models.ECAPA_TDNN import BatchNorm1d
 from espnet2.tasks.ssl import SSLTask
 
 
@@ -11,6 +10,13 @@ logger = logging.getLogger(__name__)
 
 class XeusFineTunning(nn.Module):
     """
+        ASV Adapter for fine-tuning from
+
+        Liu Y., He L., Liu J., Johnson M.T. (2019)
+        "Introducing Phonetic Information to Speaker Embedding for Speaker Verification"
+        EURASIP Journal on Audio, Speech, and Music Processing, 2019:19.
+        DOI: 10.1186/s13636-019-0166-8
+        https://doi.org/10.1186/s13636-019-0166-8
     """
 
     def __init__(self, pretrain, emb_dim, freeze_strategy="none",
@@ -89,8 +95,11 @@ class XeusFineTunning(nn.Module):
 
         asp_input = normalized.permute(0, 2, 1)
 
-        pooled = self.asp(asp_input, lengths=batch['lengths'])
+        pooled = self.asp(asp_input)
 
         embeddings = self.head(pooled.squeeze(-1))
 
         return {"embeddings": embeddings}
+
+if __name__ == "__main__":
+    model = XeusFineTunning(pretrain='/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth', emb_dim=512, layers = [5,6,7,8,9,10])
