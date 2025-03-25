@@ -10,11 +10,11 @@ defaults:
   - _self_
 optimizer:
   _target_: torch.optim.Adam
-  lr: 1e-3
-  weight_decay: 2e-5
+  weight_decay: 1e-5
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  eta_min: 1e-4
+  _target_: torch.optim.lr_scheduler.StepLR
+  gamma: 0.9
+  step_size: 1
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
   embed_dim: 512
@@ -22,7 +22,7 @@ loss_function:
 trainer:
   log_step: 100
   log_audio: False
-  n_epochs: 5
+  n_epochs: 10
   device_tensors: ["data_object", "labels", "lengths"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
@@ -33,3 +33,5 @@ trainer:
   save_dir: "data/saved"
   seed: 1
   use_amp_autocast: False
+  batch_scheduler: False
+  from_pretrained: '/home/stankuznetsov/CourseWork/pretrained_checkpoints/w2v_adapter_ch4.pth'

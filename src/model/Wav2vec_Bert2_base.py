@@ -11,21 +11,18 @@ class Wav2vecBert2Base(nn.Module):
 
     """
 
+    def get_lr_params(self):
+        return [
+            {'params': [p for p in self.w2v.wav2vec2_bert.parameters() if p.requires_grad], 'lr': 1e-6},
+            {'params': [p for p in self.w2v.projector.parameters() if p.requires_grad], 'lr': 1e-4},
+            {'params': [p for p in self.w2v.tdnn.parameters() if p.requires_grad], 'lr': 1e-4},
+            {'params': [p for p in self.w2v.feature_extractor.parameters() if p.requires_grad], 'lr': 1e-4},
+            {'params': [p for p in self.w2v.classifier.parameters() if p.requires_grad], 'lr': 1e-4},
+        ]
+
     def __init__(self, pretrained):
         super().__init__()
         self.w2v = Wav2Vec2BertForXVector.from_pretrained('facebook/w2v-bert-2.0', cache_dir=pretrained)
-        for param in self.w2v.parameters():
-            param.requires_grad = False
-
-        for param in self.w2v.projector.parameters():
-            param.requires_grad = True
-
-        for param in self.w2v.tdnn.parameters():
-            param.requires_grad = True
-        for param in self.w2v.feature_extractor.parameters():
-            param.requires_grad = True
-        for param in self.w2v.classifier.parameters():
-            param.requires_grad = True
 
     def forward(self, batch):
         """

@@ -1,9 +1,11 @@
 _target_: torch.utils.data.DataLoader
 num_workers: 4
 pin_memory: True
-batch_size: 128
-prefetch_factor: 2
+batch_size: 32
+prefetch_factor: 4
+persistent_workers: True
 collate_fn:
     _target_: src.datasets.collate.CollateW2V
 #    _target_: src.datasets.collate.Collate
-    pretrained: '/home/stefan/Documents/CourseWork/pretrained/'
+#    pretrained: '/home/stefan/Documents/CourseWork/pretrained/'
+    pretrained: '/home/stankuznetsov/CourseWork/Wav2Vec_bert_2/'

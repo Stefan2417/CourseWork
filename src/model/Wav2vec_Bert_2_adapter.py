@@ -13,6 +13,14 @@ class Wav2vecBert2Adapter(nn.Module):
 
     """
 
+    def get_lr_params(self):
+        return [
+            {'params': [p for p in self.w2v.parameters() if p.requires_grad], 'lr': 1e-6},
+            {'params': [p for p in self.layer_norm.parameters() if p.requires_grad], 'lr': 1e-4},
+            {'params': [p for p in self.asp.parameters() if p.requires_grad], 'lr': 1e-4},
+            {'params': [p for p in self.head.parameters() if p.requires_grad], 'lr': 1e-4}
+        ]
+
     def __init__(self, emb_dim, pretrained, freeze_strategy="none", layers=None):
         super().__init__()
 

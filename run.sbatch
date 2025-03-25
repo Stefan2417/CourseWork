@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=train_model            # Название задачи
+#SBATCH --job-name=w2v_fine-tunning_adapter_v2            # Название задачи
 #SBATCH --error=task-%j.err        # Файл для вывода ошибок
 #SBATCH --output=task-%j.log       # Файл для вывода результатов
 #SBATCH --time=200:00:00            # Максимальное время выполнения
