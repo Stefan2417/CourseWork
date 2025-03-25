@@ -13,7 +13,7 @@ optimizer:
   weight_decay: 1e-5
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.StepLR
-  gamma: 0.9
+  gamma: 0.7
   step_size: 1
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
@@ -34,4 +34,4 @@ trainer:
   seed: 1
   use_amp_autocast: False
   batch_scheduler: False
-  from_pretrained: '/home/stankuznetsov/CourseWork/pretrained_checkpoints/w2v_adapter_ch4.pth'
+#  from_pretrained: '/home/stefan/Documents/CourseWork/data/saved/debug/checkpoint-epoch1.pth'

@@ -18,7 +18,6 @@ class BaseTrainer:
     def __init__(
         self,
         model,
-        criterion,
         metrics,
         optimizer,
         lr_scheduler,
@@ -74,7 +73,6 @@ class BaseTrainer:
         self.use_amp_autocast = config.trainer.get("use_amp_autocast", False)
 
         self.model = model
-        self.criterion = criterion
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
@@ -161,6 +159,8 @@ class BaseTrainer:
 
         if config.trainer.get("from_pretrained") is not None:
             self._from_pretrained(config.trainer.get("from_pretrained"))
+
+        self.criterion = model.criterion
 
     def train(self):
         """
@@ -507,8 +507,7 @@ class BaseTrainer:
             "lr_scheduler": self.lr_scheduler.state_dict(),
             "monitor_best": self.mnt_best,
             "config": self.config,
-            "cur_step": self.cur_step,
-            "loss_function" : self.criterion.state_dict(),
+            "cur_step": self.cur_step
         }
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):
@@ -553,8 +552,7 @@ class BaseTrainer:
         # load optimizer state from checkpoint only when optimizer type is not changed.
         if (
             checkpoint["config"]["optimizer"] != self.config["optimizer"]
-            or checkpoint["config"]["lr_scheduler"] != self.config["lr_scheduler"] or
-            checkpoint["config"]["loss_function"] != self.config["loss_function"]
+            or checkpoint["config"]["lr_scheduler"] != self.config["lr_scheduler"]
         ):
             self.logger.warning(
                 "Warning: Optimizer or lr_scheduler given in the config file is different "
@@ -564,7 +562,6 @@ class BaseTrainer:
         else:
             self.optimizer.load_state_dict(checkpoint["optimizer"])
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
-            self.lr_scheduler.load_state_dict(checkpoint["loss_function"])
 
         self.logger.info(
             f"Checkpoint loaded. Resume training from epoch {self.start_epoch}"

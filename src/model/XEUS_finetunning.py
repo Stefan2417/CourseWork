@@ -19,11 +19,45 @@ class XeusFineTunning(nn.Module):
         https://doi.org/10.1186/s13636-019-0166-8
     """
 
-    def __init__(self, pretrain, emb_dim, freeze_strategy="none",
+    def get_lr_params(self):
+        # return [
+        #     {'params': list(filter(lambda p: p.requires_grad, self.w2v.parameters())), 'lr': 1e-6},
+        #     {'params': list(filter(lambda p: p.requires_grad,  self.layer_norm.parameters())), 'lr': 1e-4},
+        #     {'params': list(filter(lambda p: p.requires_grad,  self.asp.parameters())), 'lr': 1e-4},
+        #     {'params': list(filter(lambda p: p.requires_grad,  self.head.parameters())), 'lr': 1e-4},
+        #     {'params': list(filter(lambda p: p.requires_grad, self.criterion.parameters())), 'lr': 1e-4}
+        # ]
+
+        params = []
+        xeus_params = [p for p in self.xeus.parameters() if p.requires_grad]
+        if xeus_params:
+            params.append({'params': xeus_params, 'lr': 1e-6})
+
+        layer_norm_params = [p for p in self.layer_norm.parameters() if p.requires_grad]
+        if layer_norm_params:
+            params.append({'params': layer_norm_params, 'lr': 1e-4})
+
+        asp_params = [p for p in self.asp.parameters() if p.requires_grad]
+        if asp_params:
+            params.append({'params': asp_params, 'lr': 1e-4})
+
+        head_params = [p for p in self.head.parameters() if p.requires_grad]
+        if head_params:
+            params.append({'params': head_params, 'lr': 1e-4})
+
+        criterion_params = [p for p in self.criterion.parameters() if p.requires_grad]
+        if criterion_params:
+            params.append({'params': criterion_params, 'lr': 1e-4})
+
+        return params
+
+    def __init__(self, criterion, pretrain, emb_dim, freeze_strategy="none",
                  use_masks=False, layers=None):
         """
         """
         super().__init__()
+
+        self.criterion = criterion
 
         self.xeus, _ = SSLTask.build_model_from_file(
             None,

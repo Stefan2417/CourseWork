@@ -44,14 +44,15 @@ def main(config):
 
     logger.info('instantiate dataloaders and batch_transforms')
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
-    # logger.info(model)
-
-    logger.info('instantiate model')
 
     # get function handles of loss and metrics
     loss_function = instantiate(config.loss_function).to(device)
     metrics = instantiate(config.metrics)
+
+    model = instantiate(config.model, criterion=loss_function).to(device)
+    # logger.info(model)
+
+    logger.info('instantiate model')
 
     total_length = len(dataloaders['train']) * config.trainer.n_epochs
     logger.info(dataloaders.keys())
@@ -59,7 +60,8 @@ def main(config):
 
     # build optimizer, learning rate scheduler
     # trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = instantiate(config.optimizer, params=model.get_lr_params())
+    optimizer = torch.optim.Adam(params = model.get_lr_params(), weight_decay=config.optimizer.weight_decay)
+
     lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer) #TODO epoch_len
     scaler = torch.GradScaler()
 
@@ -69,7 +71,6 @@ def main(config):
 
     trainer = Trainer(
         model=model,
-        criterion=loss_function,
         metrics=metrics,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,

@@ -14,19 +14,38 @@ class Wav2vecBert2Adapter(nn.Module):
     """
 
     def get_lr_params(self):
-        return [
-            {'params': [p for p in self.w2v.parameters() if p.requires_grad], 'lr': 1e-6},
-            {'params': [p for p in self.layer_norm.parameters() if p.requires_grad], 'lr': 1e-4},
-            {'params': [p for p in self.asp.parameters() if p.requires_grad], 'lr': 1e-4},
-            {'params': [p for p in self.head.parameters() if p.requires_grad], 'lr': 1e-4}
-        ]
 
-    def __init__(self, emb_dim, pretrained, freeze_strategy="none", layers=None):
+        params = []
+        w2v_params = [p for p in self.w2v.parameters() if p.requires_grad]
+        if w2v_params:
+            params.append({'params': w2v_params, 'lr': 1e-6})
+
+        layer_norm_params = [p for p in self.layer_norm.parameters() if p.requires_grad]
+        if layer_norm_params:
+            params.append({'params': layer_norm_params, 'lr': 1e-3})
+
+        asp_params = [p for p in self.asp.parameters() if p.requires_grad]
+        if asp_params:
+            params.append({'params': asp_params, 'lr': 1e-3})
+
+        head_params = [p for p in self.head.parameters() if p.requires_grad]
+        if head_params:
+            params.append({'params': head_params, 'lr': 1e-3})
+
+        criterion_params = [p for p in self.criterion.parameters() if p.requires_grad]
+        if criterion_params:
+            params.append({'params': criterion_params, 'lr': 1e-3})
+
+        return params
+
+    def __init__(self, criterion, emb_dim, pretrained, freeze_strategy="none", layers=None):
         super().__init__()
 
         self.w2v = Wav2Vec2BertModel.from_pretrained(
             'facebook/w2v-bert-2.0', cache_dir=pretrained
         )
+
+        self.criterion = criterion
 
 
         assert layers is not None
