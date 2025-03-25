@@ -35,19 +35,19 @@ class XeusFineTunning(nn.Module):
 
         layer_norm_params = [p for p in self.layer_norm.parameters() if p.requires_grad]
         if layer_norm_params:
-            params.append({'params': layer_norm_params, 'lr': 1e-4})
+            params.append({'params': layer_norm_params, 'lr': 1e-3})
 
         asp_params = [p for p in self.asp.parameters() if p.requires_grad]
         if asp_params:
-            params.append({'params': asp_params, 'lr': 1e-4})
+            params.append({'params': asp_params, 'lr': 1e-3})
 
         head_params = [p for p in self.head.parameters() if p.requires_grad]
         if head_params:
-            params.append({'params': head_params, 'lr': 1e-4})
+            params.append({'params': head_params, 'lr': 1e-3})
 
         criterion_params = [p for p in self.criterion.parameters() if p.requires_grad]
         if criterion_params:
-            params.append({'params': criterion_params, 'lr': 1e-4})
+            params.append({'params': criterion_params, 'lr': 1e-3})
 
         return params
 

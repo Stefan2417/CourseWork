@@ -1,7 +1,6 @@
 VoxCeleb1_test:
   name: "VoxCeleb1_test"
   _target_: src.datasets.VoxCeleb
-#  dir_name: '/home/stefan/Documents/CourseWork/VoxCeleb/vox1_test_wav/wav'
   dir_name: '/home/stankuznetsov/CourseWork/vox1_test_wav/wav'
   instance_transforms: ${transforms.instance_transforms.inference}
   sample_rate: 16000

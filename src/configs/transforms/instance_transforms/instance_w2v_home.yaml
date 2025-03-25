@@ -1,0 +1,22 @@
+train:
+  data_object: # name of the tensor on which we apply transform
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.AudioSizeNormalize
+      - _target_: src.transforms.RandomCrop1D
+        min_sec: 3
+        max_sec: 3
+        sample_rate: 16000
+      - _target_: src.transforms.InstanceAugment
+        musan_path: "/home/stefan/Documents/CourseWork/MUSAN/musan/"
+        rir_path: "/home/stefan/Documents/CourseWork/RIRS_NOISES/"
+
+inference:
+  data_object: # name of the tensor on which we apply transform
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.AudioSizeNormalize
+      - _target_: src.transforms.RandomCrop1D
+        min_sec: 3
+        max_sec: 3
+        sample_rate: 16000
