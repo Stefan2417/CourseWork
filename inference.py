@@ -78,8 +78,8 @@ def main(config):
         skip_model_load=config.inferencer.skip_model_load,
     )
 
-    if not already_exists:
-        inferencer.run_inference()
+    # if not already_exists:
+    inferencer.run_inference()
 
     for part in inferencer.evaluation_dataloaders.keys():
         saved_directory_path = save_path / part

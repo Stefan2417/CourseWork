@@ -9,5 +9,5 @@
 #SBATCH --mail-user=stankuznetsov@edu.hse.ru    # Укажи�~Bе ва�~H email дл�~O о�~Bп�~@авки �~Cведомлений
 #SBATCH --mail-type=END,FAIL               # Соб�~K�~Bи�~O, �~B�~@еб�~C�~N�~Iие �~Cведомлени�~O
 
-python /home/stankuznetsov/CourseWork/train.py --config-name train_w2v_adapter_server writer.run_name="train_adapter_w2v_fixed" dataloader.workers=16 dataloader.batch_size=256  model.freeze_strategy='all'                       # Выполнение расчёта
+python /home/stankuznetsov/CourseWork/train.py --config-name train_w2v_adapter_server writer.run_name="train_adapter_w2v_fixed" dataloader.num_workers=16 dataloader.batch_size=256  model.freeze_strategy='all'                       # Выполнение расчёта
 #srun {options} {command}            # Выполнение MPI расчёта

@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=train_model            # Название задачи
+#SBATCH --job-name=train_base_w2v_fixed            # Название задачи
 #SBATCH --error=task-%j.err        # Файл для вывода ошибок
 #SBATCH --output=task-%j.log       # Файл для вывода результатов
-#SBATCH --time=100:00:00            # Максимальное время выполнения
+#SBATCH --time=200:00:00            # Максимальное время выполнения
 #SBATCH --nodes=1                  # Требуемое кол-во узлов
 #SBATCH --gpus=1                   # Требуемое кол-во GPU
-#SBATCH --cpus-per-task=1          # Требуемое кол-во CPU
+#SBATCH --cpus-per-task=8          # Требуемое кол-во CPU
 #SBATCH --mail-user=stankuznetsov@edu.hse.ru    # Укажи�~Bе ва�~H email дл�~O о�~Bп�~@авки �~Cведомлений
 #SBATCH --mail-type=END,FAIL               # Соб�~K�~Bи�~O, �~B�~@еб�~C�~N�~Iие �~Cведомлени�~O
 
-python /home/stankuznetsov/CourseWork/train.py dataloader.batch_size=24 model.freeze_strategy='none' writer.run_name='full_fine-tunning_cluster_lr_bigger' optimizer.lr=0.00001 lr_scheduler.eta_min=0.000001 optimizer.weight_decay=0.000001
+python /home/stankuznetsov/CourseWork/train.py --config-name train_w2v_base_server writer.run_name="train_base_w2v_fixed" dataloader.num_workers=8 dataloader.batch_size=32                       # Выполнение расчёта
 #srun {options} {command}            # Выполнение MPI расчёта

@@ -1,23 +1,23 @@
 defaults:
-  - model: xeus_fine-tunning_home
+  - model: wav2vec_bert_2_adapter_server
   - writer: wandb
-  - metrics: voxceleb_metrics_home
+  - metrics: voxceleb_metrics_server
   - datasets:
-    - VoxCeleb2_home
-    - VoxCeleb1_test_home
-  - dataloader: VoxCeleb_xeus
-  - transforms: transforms_xeus_home
+    - VoxCeleb2_server
+    - VoxCeleb1_test_server
+  - dataloader: VoxCeleb_w2v_server
+  - transforms: transforms_w2v_server
   - _self_
 optimizer:
   _target_: torch.optim.Adam
   weight_decay: 1e-5
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.StepLR
-  gamma: 0.7
+  gamma: 0.32
   step_size: 1
 loss_function:
   _target_: src.loss.AAMSoftmaxLoss
-  embed_dim: 256
+  embed_dim: 512
   num_classes: 5994
 trainer:
   log_step: 100
@@ -34,4 +34,4 @@ trainer:
   seed: 1
   use_amp_autocast: False
   batch_scheduler: False
-#  from_pretrained:
+  from_pretrained: "/home/stankuznetsov/CourseWork/pretrained_checkpoints/w2v_adapter_checkpoint.pth"
