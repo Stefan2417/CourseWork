@@ -5,10 +5,14 @@ defaults:
   - transforms: transforms_xeus_home
   - metrics: voxceleb_metrics_home
   - _self_
+loss_function:
+  _target_: src.loss.AAMSoftmaxLoss
+  embed_dim: 256
+  num_classes: 5994
 inferencer:
   device_tensors: ["data_object", "labels", 'lengths'] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: "xeus_emb_cache" # any name here, can be a dataset name
   seed: 1
   skip_model_load: False
-  from_pretrained: null # path to the pretrained model
+  from_pretrained: "/home/stefan/Documents/CourseWork/data/saved/train_adapter_xeus_fixed/checkpoint-epoch1.pth" # path to the pretrained model

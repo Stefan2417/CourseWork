@@ -50,9 +50,9 @@ def main(config):
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
-
+    loss_function = instantiate(config.loss_function).to(device)
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
+    model = instantiate(config.model, criterion=loss_function).to(device)
 
     # get metrics
 
