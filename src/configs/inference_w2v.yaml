@@ -1,0 +1,18 @@
+defaults:
+  - model: wav2vec_bert_2_adapter_home
+  - datasets: SLCeleb_sinhala # we do not want to run inference on training data
+  - dataloader: VoxCeleb_w2v_home
+  - transforms: transforms_w2v_home
+  - metrics: slceleb_metrics_sinhala
+  - _self_
+loss_function:
+  _target_: src.loss.AAMSoftmaxLoss
+  embed_dim: 512
+  num_classes: 5994
+inferencer:
+  device_tensors: ["data_object", "labels", 'lengths'] # which tensors should be on device (ex. GPU)
+  device: auto # device name or "auto"
+  save_path: "w2v_emb_cache_sinhala_v2" # any name here, can be a dataset name
+  seed: 1
+  skip_model_load: False
+  from_pretrained: "/home/stefan/Documents/CourseWork/data/saved/tunning_adapter_w2v_fixed/checkpoint-epoch1_v2.pth" # path to the pretrained model

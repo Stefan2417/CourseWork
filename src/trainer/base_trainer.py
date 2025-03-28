@@ -18,7 +18,6 @@ class BaseTrainer:
     def __init__(
         self,
         model,
-        criterion,
         metrics,
         optimizer,
         lr_scheduler,
@@ -30,6 +29,7 @@ class BaseTrainer:
         epoch_len=None,
         skip_oom=True,
         batch_transforms=None,
+        scaler=None,
     ):
         """
         Args:
@@ -66,13 +66,17 @@ class BaseTrainer:
 
         self.logger = logger
         self.log_step = config.trainer.get("log_step", 50)
+        self.log_evaluation = config.trainer.get("log_evaluation", 10**9)
+        self.batch_scheduler = config.trainer.get("batch_scheduler", True)
+
         self.cur_step = 0
+        self.use_amp_autocast = config.trainer.get("use_amp_autocast", False)
 
         self.model = model
-        self.criterion = criterion
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
+        self.scaler = scaler
 
         self.logger.info(f'dataloaders: {dataloaders}')
 
@@ -156,6 +160,8 @@ class BaseTrainer:
         if config.trainer.get("from_pretrained") is not None:
             self._from_pretrained(config.trainer.get("from_pretrained"))
 
+        self.criterion = model.criterion
+
     def train(self):
         """
         Wrapper around training process to save model on keyboard interrupt.
@@ -179,6 +185,9 @@ class BaseTrainer:
         for epoch in range(self.start_epoch, self.epochs + 1):
             self._last_epoch = epoch
             result = self._train_epoch(epoch)
+
+            if (not self.batch_scheduler) and self.lr_scheduler is not None:
+                self.lr_scheduler.step()
 
             # save logged information into logs dict
             logs = {"epoch": epoch}
@@ -220,7 +229,6 @@ class BaseTrainer:
 
 
         self.writer.add_scalar("epoch", epoch)
-        self.epoch_len = len(self.train_dataloader)
 
         for batch_idx, batch in enumerate(
             tqdm(self.train_dataloader, desc="train", total=self.epoch_len)
@@ -258,6 +266,7 @@ class BaseTrainer:
                 # because we are interested in recent train metrics
                 last_train_metrics = self.train_metrics.result()
                 self.train_metrics.reset()
+
             if batch_idx + 1 >= self.epoch_len:
                 break
 
@@ -401,6 +410,9 @@ class BaseTrainer:
         config.trainer.max_grad_norm
         """
         if self.config["trainer"].get("max_grad_norm", None) is not None:
+            if self.scaler is not None:
+                # Unscale gradients before clipping
+                self.scaler.unscale_(self.optimizer)
             clip_grad_norm_(
                 self.model.parameters(), self.config["trainer"]["max_grad_norm"]
             )
@@ -419,6 +431,8 @@ class BaseTrainer:
         if isinstance(parameters, torch.Tensor):
             parameters = [parameters]
         parameters = [p for p in parameters if p.grad is not None]
+        if len(parameters) == 0:
+            self.logger.warning(f'parameters is empty')
         total_norm = torch.norm(
             torch.stack([torch.norm(p.grad.detach(), norm_type) for p in parameters]),
             norm_type,
@@ -493,7 +507,7 @@ class BaseTrainer:
             "lr_scheduler": self.lr_scheduler.state_dict(),
             "monitor_best": self.mnt_best,
             "config": self.config,
-            "cur_step": self.cur_step,
+            "cur_step": self.cur_step
         }
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):

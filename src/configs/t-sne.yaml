@@ -1,0 +1,13 @@
+embeddings_paths:
+  - '/home/stefan/Documents/CourseWork/data/saved/w2v_emb_cache_vox1_v2/VoxCeleb1'
+  - '/home/stefan/Documents/CourseWork/data/saved/xeus_emb_cache_vox1/VoxCeleb1'
+  - '/home/stefan/Documents/CourseWork/data/saved/ecapa_emb_cache_vox1/VoxCeleb1'
+names:
+  - 'Wav2vec-bert-2.0'
+  - 'XEUS'
+  - 'ECAPA_TDNN'
+index_path: '/home/stefan/Documents/CourseWork/data/VoxCeleb1_test/index.json'
+name_starts: 0
+fix_id: 0
+speakers: 0
+title: "VoxCeleb1 test"

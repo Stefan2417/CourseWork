@@ -10,7 +10,7 @@ class EmbedderRawNet(nn.Module):
     """
     """
 
-    def __init__(self, sample_rate=16000):
+    def __init__(self, sample_rate=16000, **kwargs):
         super().__init__()
         self.sample_rate = sample_rate
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -20,7 +20,6 @@ class EmbedderRawNet(nn.Module):
             savedir="pretrained/ecapa_vox2",
             run_opts={"device": self.device}
         )
-
 
     def forward(self, batch: dict) -> torch.Tensor:
         waveforms = batch['data_object']

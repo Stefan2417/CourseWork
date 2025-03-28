@@ -16,15 +16,18 @@ class EERMetric(BaseMetric):
                  name: str,
                  pairs_path: str,
                  device: torch.device):
+
         super().__init__(name=name)
         self.pairs = self._load_pairs(Path(pairs_path))
         self.can_cached = 0
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
+
         self.device = device
         self.embeddings_cache: Dict[str, torch.Tensor] = {}
 
-    def _load_pairs(self, path: Path) -> List[Tuple[int, str, str]]:
+    @staticmethod
+    def _load_pairs(path: Path) -> List[Tuple[int, str, str]]:
         pairs = []
         with open(path, 'r') as f:
             for line in f:
@@ -52,11 +55,11 @@ class EERMetric(BaseMetric):
                     file_path = os.path.join(directory, filename)
                     try:
                         data = torch.load(file_path)
-                        key = data['name']  # Используем имя файла без расширения как ключ
+                        key = data['name']
                         embedding = torch.nn.functional.normalize(data['embedding'], p=2, dim=0)
                         self.embeddings_cache[key] = embedding
                     except Exception as e:
-                        logger.info(f"Ошибка при загрузке {filename}: {e}")
+                        logger.info(f"error: {filename}: {e}")
 
 
     def __call__(self, directory=None, **kwargs) -> float:
@@ -68,7 +71,7 @@ class EERMetric(BaseMetric):
             self._cache_embeddings(directory, **kwargs)
 
         if 'batch_embeddings' in kwargs:
-            return -1
+            return 10000000
 
         similarities, labels = [], []
         for label, name1, name2 in self.pairs:
@@ -78,16 +81,14 @@ class EERMetric(BaseMetric):
             if emb1 is None:
                 logger.info(f'{label}, {name1}, {name2}, does not exist {name1}')
                 continue
-                # raise ValueError(f'embedding for {name1} does not exist')
             if emb2 is None:
                 logger.info(f'{label}, {name1}, {name2}, does not exist {name2}')
                 continue
-                # raise ValueError(f'embedding for {name2} does not exist')
-            emb1.to(self.device)
-            emb2.to(self.device)
 
-            cos_sim = torch.nn.functional.cosine_similarity(
-                emb1, emb2, dim=0).item()
+            emb1 = emb1.to(self.device)
+            emb2 = emb2.to(self.device)
+
+            cos_sim = torch.nn.functional.cosine_similarity(emb1, emb2, dim=0).item()
             similarities.append(cos_sim)
             labels.append(label)
 
@@ -98,12 +99,6 @@ class EERMetric(BaseMetric):
         fnr = 1 - tpr
         eer_idx = np.nanargmin(np.abs(fpr - fnr))
         eer = (fpr[eer_idx] + fnr[eer_idx]) / 2
-
-        # plt.hist([s for s, l in zip(similarities, labels) if l == 1], alpha=0.5, label='Genuine')
-        # plt.hist([s for s, l in zip(similarities, labels) if l == 0], alpha=0.5, label='Impostor')
-        # plt.legend()
-        # plt.savefig("eer_distribution.png")  # Сохранит в рабочую директорию
-        # plt.close()  # Освободит память
 
         return eer
 

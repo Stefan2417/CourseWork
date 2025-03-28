@@ -1,0 +1,7 @@
+SLCeleb_tamil:
+  name: "SLCeleb_sinhala"
+  _target_: src.datasets.VoxCeleb
+  dir_name: '/home/stefan/Documents/CourseWork/SLCeleb/Sinhala/test'
+  instance_transforms: ${transforms.instance_transforms.inference}
+  sample_rate: 16000
+  extension: 'wav'

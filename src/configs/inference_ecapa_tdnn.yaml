@@ -1,0 +1,18 @@
+defaults:
+  - model: ecapa_tdnn
+  - datasets: SLCeleb_sinhala # we do not want to run inference on training data
+  - dataloader: VoxCeleb_xeus
+  - transforms: transforms_ecapa_tdnn_home
+  - metrics: slceleb_metrics_sinhala
+  - _self_
+loss_function:
+  _target_: src.loss.AAMSoftmaxLoss
+  embed_dim: 256
+  num_classes: 5994
+inferencer:
+  device_tensors: ["data_object", "labels", 'lengths'] # which tensors should be on device (ex. GPU)
+  device: auto # device name or "auto"
+  save_path: "ecapa_emb_cache_sinhala" # any name here, can be a dataset name
+  seed: 1
+  skip_model_load: true
+  from_pretrained: null # path to the pretrained model

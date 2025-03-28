@@ -13,7 +13,7 @@ class AAMSoftmaxLoss(nn.Module):
         margin (float):
     """
 
-    def __init__(self, embed_dim: int, num_classes: int, scale: float = 32.0, margin: float = 0.2):
+    def __init__(self, embed_dim: int, num_classes: int, scale: float = 30.0, margin: float = 0.2):
         super().__init__()
         self.scale = scale
         self.margin = margin
@@ -47,7 +47,7 @@ class AAMSoftmaxLoss(nn.Module):
         logits = torch.where(one_hot.bool(), phi, cos_theta)
         logits *= self.scale
 
-        loss = F.cross_entropy(logits, labels, reduction='mean')
+        loss = F.cross_entropy(logits, labels)
 
         return {
             "loss": loss

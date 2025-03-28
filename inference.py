@@ -50,9 +50,9 @@ def main(config):
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
-
+    loss_function = instantiate(config.loss_function).to(device)
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
+    model = instantiate(config.model, criterion=loss_function).to(device)
 
     # get metrics
 
@@ -78,8 +78,8 @@ def main(config):
         skip_model_load=config.inferencer.skip_model_load,
     )
 
-    if not already_exists:
-        inferencer.run_inference()
+    # if not already_exists:
+    inferencer.run_inference()
 
     for part in inferencer.evaluation_dataloaders.keys():
         saved_directory_path = save_path / part

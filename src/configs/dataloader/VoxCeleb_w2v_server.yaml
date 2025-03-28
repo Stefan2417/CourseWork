@@ -1,0 +1,9 @@
+_target_: torch.utils.data.DataLoader
+num_workers: 16
+pin_memory: True
+batch_size: 256
+prefetch_factor: 4
+persistent_workers: True
+collate_fn:
+    _target_: src.datasets.collate.CollateW2V
+    pretrained: '/home/stankuznetsov/CourseWork/Wav2Vec_bert_2/'

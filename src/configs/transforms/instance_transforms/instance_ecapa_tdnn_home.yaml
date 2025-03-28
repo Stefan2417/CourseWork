@@ -1,0 +1,9 @@
+inference:
+  data_object: # name of the tensor on which we apply transform
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.AudioSizeNormalize
+      - _target_: src.transforms.BoundCrop
+        min_sec: 5
+        max_sec: 40
+        sample_rate: 16000

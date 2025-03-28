@@ -1,18 +1,10 @@
-import json
 import logging
-
-import torchaudio
-import numpy as np
-import torch
-from tqdm.auto import tqdm
 
 from src.datasets.base_dataset import BaseDataset
 from src.utils.io_utils import ROOT_PATH, read_json, write_json
 
 from src.datasets.data_utils import parse_dataset_speakers, extract_speaker_id
-import soundfile as sf
 from pathlib import Path
-from librosa import resample
 
 
 logger = logging.getLogger(__name__)
@@ -31,8 +23,8 @@ class VoxCeleb(BaseDataset):
     ):
         index_path = ROOT_PATH / "data" / name / "index.json"
         self.name = name
-        self.extension = extension
         self.dir_name = dir_name
+        self.extension = extension
         self.sample_rate = sample_rate
         self.give_label = {}
         self.cnt_labels = 0
@@ -42,7 +34,7 @@ class VoxCeleb(BaseDataset):
         else:
             index = self._create_index()
 
-        super().__init__(index, limit, shuffle_index, *args, **kwargs)
+        super().__init__(index=index, sample_rate=sample_rate, limit=limit, shuffle_index=shuffle_index, *args, **kwargs)
 
     def _create_index(self):
         """
@@ -87,46 +79,3 @@ class VoxCeleb(BaseDataset):
         for ind in self._index:
             path_to_label[ind['path']] = ind['label']
         return path_to_label
-
-    def __getitem__(self, ind):
-        """
-        Get element from the index, preprocess it, and combine it
-        into a dict.
-
-        Notice that the choice of key names is defined by the template user.
-        However, they should be consistent across dataset getitem, collate_fn,
-        loss_function forward method, and model forward method.
-
-        Args:
-            ind (int): index in the self.index list.
-        Returns:
-            instance_data (dict): dict, containing instance
-                (a single dataset element).
-        """
-
-        data_dict = self._index[ind]
-        data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
-        data_name = data_dict["name"]
-
-        instance_data = {"data_object": data_object, "label": data_label, "name" : data_name}
-        instance_data = self.preprocess_data(instance_data)
-
-        return instance_data
-
-    def load_object(self, path):
-        waveform, sr = torchaudio.load(path, format=self.extension)
-        assert sr == self.sample_rate
-        return torch.Tensor(waveform)
-
-    def preprocess_data(self, instance_data):
-        if self.instance_transforms is not None:
-            for transform_name in self.instance_transforms.keys():
-                instance_data[transform_name] = self.instance_transforms[
-                    transform_name
-                ](instance_data[transform_name])
-
-        waveform = instance_data["data_object"]
-        instance_data["length"] = waveform.size(0)
-        return instance_data

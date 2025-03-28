@@ -1,0 +1,4 @@
+defaults:
+  - batch_transforms: example
+  - instance_transforms: instance_w2v_server
+  - _self_

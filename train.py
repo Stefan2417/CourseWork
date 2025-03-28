@@ -15,7 +15,7 @@ from src.utils.init_utils import set_random_seed, setup_saving_and_logging
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-@hydra.main(version_base=None, config_path="src/configs", config_name="baseline")
+@hydra.main(version_base=None, config_path="src/configs", config_name="bebra")
 def main(config):
     """
     Main script for training. Instantiates the model, optimizer, scheduler,
@@ -39,34 +39,38 @@ def main(config):
 
     # setup data_loader instances
     # batch_transforms should be put on device
+    logger.info('run get_dataloaders')
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
     logger.info('instantiate dataloaders and batch_transforms')
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
-    # logger.info(model)
 
     # get function handles of loss and metrics
     loss_function = instantiate(config.loss_function).to(device)
     metrics = instantiate(config.metrics)
+
+    model = instantiate(config.model, criterion=loss_function).to(device)
+    # logger.info(model)
+
+    logger.info('instantiate model')
 
     total_length = len(dataloaders['train']) * config.trainer.n_epochs
     logger.info(dataloaders.keys())
     logger.info(f'total_length: {total_length}')
 
     # build optimizer, learning rate scheduler
-    trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer, T_max=total_length) #TODO epoch_len
+    # trainable_params = filter(lambda p: p.requires_grad, model.parameters())
+    optimizer = torch.optim.Adam(params = model.get_lr_params(), weight_decay=config.optimizer.weight_decay)
+
+    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer) #TODO epoch_len
+    scaler = torch.GradScaler()
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
-    # epoch_len = config.trainer.get("epoch_len")
-    epoch_len = None
+    epoch_len = config.trainer.get("epoch_len", None)
 
     trainer = Trainer(
         model=model,
-        criterion=loss_function,
         metrics=metrics,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
@@ -78,6 +82,7 @@ def main(config):
         writer=writer,
         batch_transforms=batch_transforms,
         skip_oom=config.trainer.get("skip_oom", True),
+        scaler=scaler
     )
 
     trainer.train()

@@ -1,0 +1,37 @@
+defaults:
+  - model: xeus_fine-tunning_server
+  - writer: wandb
+  - metrics: voxceleb_metrics_server
+  - datasets:
+    - VoxCeleb2_server
+    - VoxCeleb1_test_server
+  - dataloader: VoxCeleb_xeus
+  - transforms: transforms_xeus_server
+  - _self_
+optimizer:
+  _target_: torch.optim.Adam
+  weight_decay: 1e-5
+lr_scheduler:
+  _target_: torch.optim.lr_scheduler.StepLR
+  gamma: 0.7
+  step_size: 1
+loss_function:
+  _target_: src.loss.AAMSoftmaxLoss
+  embed_dim: 256
+  num_classes: 5994
+trainer:
+  log_step: 100
+  log_audio: False
+  n_epochs: 10
+  device_tensors: ["data_object", "labels", "lengths"] # which tensors should be on device (ex. GPU)
+  resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
+  device: auto # device name or "auto"
+  override: True # if True, will override the previous run with the same name
+  monitor: "off" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
+  save_period: 1 # checkpoint each save_period epochs in addition to the best epoch
+  early_stop: ${trainer.n_epochs} # epochs for early stopping
+  save_dir: "data/saved"
+  seed: 1
+  use_amp_autocast: False
+  batch_scheduler: False
+#  from_pretrained:
