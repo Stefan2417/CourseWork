@@ -49,7 +49,7 @@ def visualize_embeddings(embeddings_dict, labels_dict, title="Speaker Embeddings
     n_models = len(embeddings_dict)
     n_cols = 3
     n_rows = (n_models + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, dpi=dpi)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, dpi=dpi, constrained_layout=True)
     axes = axes.flatten()
 
     all_labels = np.concatenate([np.array(labels) for labels in labels_dict.values()])
@@ -80,6 +80,10 @@ def visualize_embeddings(embeddings_dict, labels_dict, title="Speaker Embeddings
         color_indices = np.array([label_to_color_idx[label] for label in df['speaker']])
 
         ax = axes[i]
+        ax.set_xlim(-70, 70)
+        ax.set_ylim(-70, 70)
+        ax.set_aspect('equal')
+
         scatter = ax.scatter(df['x'], df['y'], c=color_indices, cmap=cmap, norm=norm,
                              alpha=0.7, s=50, edgecolors='w', linewidths=0.5)
 
@@ -90,7 +94,7 @@ def visualize_embeddings(embeddings_dict, labels_dict, title="Speaker Embeddings
     for i in range(n_models, len(axes)):
         fig.delaxes(axes[i])
 
-    plt.suptitle(title, fontsize=18, fontweight='bold', y=0.98)
+    plt.suptitle(title, fontsize=18, fontweight='bold', y=0.92)
 
     legend_elements = [plt.Line2D([0], [0], marker='o', color='w',
                                   markerfacecolor=colors[label_to_color_idx[label]],
@@ -101,9 +105,7 @@ def visualize_embeddings(embeddings_dict, labels_dict, title="Speaker Embeddings
         fig.legend(handles=legend_elements,
                    loc='lower center', ncol=min(10, n_speakers),
                    bbox_to_anchor=(0.5, 0.01), fontsize=12)
-
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.92, bottom=0.1)
+    fig.subplots_adjust(top=0.9)
 
     return fig
 
@@ -120,6 +122,7 @@ def main(config):
         speaker_id = Path(*Path(data['name']).parts[0 + config.name_starts:1 + config.name_starts])
         if config.fix_id:
             speaker_id = f'id{speaker_id}'
+        speaker_id = str(speaker_id)
         speaker_id = extract_speaker_id(speaker_id)
         set_of_speakers_id.add(speaker_id)
 
@@ -142,6 +145,7 @@ def main(config):
             speaker_id = Path(*Path(name).parts[0 + config.name_starts:1 + config.name_starts])
             if config.fix_id:
                 speaker_id = f'id{speaker_id}'
+            speaker_id = str(speaker_id)
             speaker_id = extract_speaker_id(speaker_id)
             if speaker_id not in set_of_speakers_id:
                 continue
@@ -156,8 +160,8 @@ def main(config):
     fig = visualize_embeddings(
         model_embeddings,
         model_labels,
-        title="Speaker Embeddings Visualization",
-        figsize=(192.0, 108.0),
+        title=config.title,
+        figsize=(24, 12),
         perplexity=40,
         speakers=config.speakers
     )
