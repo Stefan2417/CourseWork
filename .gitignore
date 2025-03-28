@@ -121,3 +121,8 @@ pretrained/
 auth_key.pem
 copy_scp.sh
 RIRS_NOISES/
+SLCeleb/
+ZULU/audio
+ZULU/LICENSE.txt
+ZULU/README.txt
+speaker_embeddings_visualization.png

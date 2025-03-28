@@ -79,3 +79,43 @@ class AudioSizeNormalize(nn.Module):
             raise ValueError(f"Unexpected input dimension: {x.dim()}, expected 1D or 2D tensor")
 
         return x
+
+
+class BoundCrop(nn.Module):
+    """
+        according to
+    """
+
+    def __init__(self, min_sec, max_sec, sample_rate=16000):
+        """
+        Args:
+            cut_length (float): cut length in seconds.
+            sample_rate (int): Sample rate of the audio.
+        """
+        super().__init__()
+        self.min_samples = int(min_sec * sample_rate) + 240
+        self.max_samples = int(max_sec * sample_rate) + 240
+        self.sample_rate = sample_rate
+
+    def forward(self, x):
+        """
+        Args:
+            x (Tensor): Input audio tensor [time] for instance transform
+        Returns:
+            x (Tensor): window cropped audio tensor [time]
+        """
+        # x is expected to be [time] after AudioNormalize
+        if x.dim() != 1:
+            raise ValueError(f"Expected 1D tensor, got {x.dim()}D tensor")
+        time = x.size(0)
+        shortage = 0
+        if time <= self.min_samples:
+            shortage = self.min_samples - time
+
+        if shortage > 0:
+            repeats = math.ceil(self.min_samples / time)
+            x = x.repeat(repeats)[:self.min_samples]
+        else:
+            x = x[:self.max_samples]
+
+        return x

@@ -1,1 +1,2 @@
-scp -P2222 -Cpr stankuznetsov@cluster.hpc.hse.ru:/home/stankuznetsov/CourseWork/data/saved '/home/stefan/Documents/CourseWork/data/'
+rsync -avz -e "ssh -p2222" stankuznetsov@cluster.hpc.hse.ru:/home/stankuznetsov/CourseWork/data/saved/ /home/stefan/Documents/CourseWork/data/saved/
+#rsync -avz -e "ssh -p2222" stankuznetsov@cluster.hpc.hse.ru:/home/stankuznetsov/CourseWork/pretrained_checkpoints/xeus_adapter_checkpoint.pth /home/stefan/Documents/CourseWork/data/saved/train_adapter_xeus_fixed/

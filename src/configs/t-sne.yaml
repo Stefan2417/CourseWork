@@ -1,0 +1,12 @@
+embeddings_paths:
+  - '/home/stefan/Documents/CourseWork/data/saved/w2v_emb_cache_zulu/Zulu'
+  - '/home/stefan/Documents/CourseWork/data/saved/xeus_emb_cache_zulu/Zulu'
+  - '/home/stefan/Documents/CourseWork/data/saved/ecapa_emb_cache_zulu/Zulu'
+names:
+  - 'Wav2vec-bert-2.0'
+  - 'XEUS'
+  - 'ECAPA_TDNN'
+index_path: '/home/stefan/Documents/CourseWork/data/Zulu/index.json'
+name_starts: 1
+fix_id: 1
+speakers: 40
