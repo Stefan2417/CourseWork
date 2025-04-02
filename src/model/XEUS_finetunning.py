@@ -6,58 +6,41 @@ from speechbrain.lobes.models.ECAPA_TDNN import AttentiveStatisticsPooling
 from espnet2.tasks.ssl import SSLTask
 
 
-logger = logging.getLogger(__name__)
-
 class XeusFineTunning(nn.Module):
-    """
-        ASV Adapter for fine-tuning from
-
-        Liu Y., He L., Liu J., Johnson M.T. (2019)
-        "Introducing Phonetic Information to Speaker Embedding for Speaker Verification"
-        EURASIP Journal on Audio, Speech, and Music Processing, 2019:19.
-        DOI: 10.1186/s13636-019-0166-8
-        https://doi.org/10.1186/s13636-019-0166-8
-    """
 
     def get_lr_params(self):
-        # return [
-        #     {'params': list(filter(lambda p: p.requires_grad, self.w2v.parameters())), 'lr': 1e-6},
-        #     {'params': list(filter(lambda p: p.requires_grad,  self.layer_norm.parameters())), 'lr': 1e-4},
-        #     {'params': list(filter(lambda p: p.requires_grad,  self.asp.parameters())), 'lr': 1e-4},
-        #     {'params': list(filter(lambda p: p.requires_grad,  self.head.parameters())), 'lr': 1e-4},
-        #     {'params': list(filter(lambda p: p.requires_grad, self.criterion.parameters())), 'lr': 1e-4}
-        # ]
-
         params = []
         xeus_params = [p for p in self.xeus.parameters() if p.requires_grad]
         if xeus_params:
-            params.append({'params': xeus_params, 'lr': 1e-6})
+            params.append({'params': xeus_params, 'lr': self.main_lr})
 
         layer_norm_params = [p for p in self.layer_norm.parameters() if p.requires_grad]
         if layer_norm_params:
-            params.append({'params': layer_norm_params, 'lr': 1e-4})
+            params.append({'params': layer_norm_params, 'lr': self.adapter_lr})
 
         asp_params = [p for p in self.asp.parameters() if p.requires_grad]
         if asp_params:
-            params.append({'params': asp_params, 'lr': 1e-4})
+            params.append({'params': asp_params, 'lr': self.adapter_lr})
 
         head_params = [p for p in self.head.parameters() if p.requires_grad]
         if head_params:
-            params.append({'params': head_params, 'lr': 1e-4})
+            params.append({'params': head_params, 'lr': self.adapter_lr})
 
         criterion_params = [p for p in self.criterion.parameters() if p.requires_grad]
         if criterion_params:
-            params.append({'params': criterion_params, 'lr': 1e-4})
+            params.append({'params': criterion_params, 'lr': self.adapter_lr})
 
         return params
 
     def __init__(self, criterion, pretrain, emb_dim, freeze_strategy="none",
-                 use_masks=False, layers=None):
+                 use_masks=False, layers=None, main_lr=0, adapter_lr=0):
         """
         """
         super().__init__()
 
         self.criterion = criterion
+        self.main_lr = main_lr
+        self.adapter_lr = adapter_lr
 
         self.xeus, _ = SSLTask.build_model_from_file(
             None,
@@ -135,5 +118,7 @@ class XeusFineTunning(nn.Module):
 
         return {"embeddings": embeddings}
 
+
 if __name__ == "__main__":
-    model = XeusFineTunning(pretrain='/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth', emb_dim=512, layers = [5,6,7,8,9,10])
+    model = XeusFineTunning(pretrain='/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth', emb_dim=512,
+                            layers=[5, 6, 7, 8, 9, 10])

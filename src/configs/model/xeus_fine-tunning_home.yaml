@@ -3,3 +3,5 @@ pretrain: '/home/stefan/Documents/CourseWork/XEUS/model/xeus_checkpoint.pth'
 layers: [5, 6, 7, 8, 9, 10]
 emb_dim: 256
 freeze_strategy: 'all'
+main_lr: 1e-6
+adapter_lr: 1e-4

@@ -126,3 +126,5 @@ ZULU/audio
 ZULU/LICENSE.txt
 ZULU/README.txt
 speaker_embeddings_visualization.png
+/scripts/copy_scp.sh
+/scripts/copy_data_saved.sh

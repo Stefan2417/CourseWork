@@ -82,9 +82,6 @@ class AudioSizeNormalize(nn.Module):
 
 
 class BoundCrop(nn.Module):
-    """
-        according to
-    """
 
     def __init__(self, min_sec, max_sec, sample_rate=16000):
         """
@@ -104,7 +101,6 @@ class BoundCrop(nn.Module):
         Returns:
             x (Tensor): window cropped audio tensor [time]
         """
-        # x is expected to be [time] after AudioNormalize
         if x.dim() != 1:
             raise ValueError(f"Expected 1D tensor, got {x.dim()}D tensor")
         time = x.size(0)

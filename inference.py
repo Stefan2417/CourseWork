@@ -78,7 +78,6 @@ def main(config):
         skip_model_load=config.inferencer.skip_model_load,
     )
 
-    # if not already_exists:
     inferencer.run_inference()
 
     for part in inferencer.evaluation_dataloaders.keys():
@@ -88,11 +87,6 @@ def main(config):
             metric_value = metric(saved_directory_path)
             print(f'{metric.name}: {metric_value:.4f}\n')
             metric.reset()
-    #
-    # for part in logs.keys():
-    #     for key, value in logs[part].items():
-    #         full_key = part + "_" + key
-    #         print(f"    {full_key:15s}: {value}")
 
 
 if __name__ == "__main__":

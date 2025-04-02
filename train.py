@@ -50,7 +50,6 @@ def main(config):
     metrics = instantiate(config.metrics)
 
     model = instantiate(config.model, criterion=loss_function).to(device)
-    # logger.info(model)
 
     logger.info('instantiate model')
 
@@ -59,14 +58,11 @@ def main(config):
     logger.info(f'total_length: {total_length}')
 
     # build optimizer, learning rate scheduler
-    # trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = torch.optim.Adam(params = model.get_lr_params(), weight_decay=config.optimizer.weight_decay)
 
     lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer) #TODO epoch_len
     scaler = torch.GradScaler()
 
-    # epoch_len = number of iterations for iteration-based training
-    # epoch_len = None or len(dataloader) for epoch-based training
     epoch_len = config.trainer.get("epoch_len", None)
 
     trainer = Trainer(
