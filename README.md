@@ -1,138 +1,142 @@
-# PyTorch Template for DL projects
+# 🗣️ The Impact of Language on Automatic Speaker Verification Systems
 
-<p align="center">
-  <a href="#about">About</a> •
-  <a href="#tutorials">Tutorials</a> •
-  <a href="#examples">Examples</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#how-to-use">How To Use</a> •
-  <a href="#useful-links">Useful Links</a> •
-  <a href="#credits">Credits</a> •
-  <a href="#license">License</a>
-</p>
+> Research project exploring the impact of language and multilingual pretraining on speaker verification systems.
 
-<p align="center">
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
-<a href="https://github.com/Blinorot/pytorch_project_template/blob/main/LICENSE">
-   <img src=https://img.shields.io/badge/license-MIT-blue.svg>
-</a>
-</p>
+[![License](https://img.shields.io/github/license/Stefan2417/CourseWork)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![HuggingFace Models](https://img.shields.io/badge/models-HuggingFace-orange)](https://huggingface.co/facebook/w2v-bert-2.0)
 
-## About
+---
 
-This repository contains a template for [PyTorch](https://pytorch.org/)-based Deep Learning projects.
+## 📖 Overview
 
-The template utilizes different python-dev techniques to improve code readability. Configuration methods enhance reproducibility and experiments control.
+This repository contains the implementation and experimental setup of a research project on **speaker verification (SV)** in **multilingual and low-resource conditions**. The study evaluates how **multilingual pretraining** affects the **robustness** and **generalization** of deep SV models like `Wav2Vec2-BERT 2.0`, `XEUS`.
 
-The repository is released as a part of the [HSE DLA course](https://github.com/markovka17/dla), however, can easily be adopted for any DL-task.
+---
 
-This template is the official recommended template for the [EPFL CS-433 ML Course](https://www.epfl.ch/labs/mlo/machine-learning-cs-433/).
+### 💡 Key Contributions
 
-## Tutorials
+- ✅ Demonstrated the **importance of multilingual pretraining** for speaker verification tasks, especially under data scarcity and language mismatch.
+- 🔧 Successfully **adapted multilingual SSL models** (XEUS, Wav2Vec2-BERT 2.0) to the speaker verification task using the **PMFA method**.
 
-This template utilizes experiment tracking techniques, such as [WandB](https://docs.wandb.ai/) and [Comet ML](https://www.comet.com/docs/v2/), and [Hydra](https://hydra.cc/docs/intro/) for the configuration. It also automatically reformats code and conducts several checks via [pre-commit](https://pre-commit.com/). If you are not familiar with these tools, we advise you to look at the tutorials below:
+---
 
-- [Python Dev Tips](https://github.com/ebezzam/python-dev-tips): information about [Git](https://git-scm.com/doc), [pre-commit](https://pre-commit.com/), [Hydra](https://hydra.cc/docs/intro/), and other stuff for better Python code development. The YouTube recording of the workshop is available [here](https://youtu.be/okxaTuBdDuY).
+## 🧪 Experiments
 
-- [Seminar on R&D Coding](https://youtu.be/sEA-Js5ZHxU): Seminar from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/) with template discussion and reasoning. It also explains how to work with [WandB](https://docs.wandb.ai/). The seminar materials can be found [here](https://github.com/LauzHack/deep-learning-bootcamp/blob/main/day03/Seminar_WandB_and_Coding.ipynb).
+### ✅ Models Used
+- **[Wav2Vec2-BERT 2.0](https://huggingface.co/facebook/w2v-bert-2.0)** (SSL + BERT-style Transformer)
+- **[XEUS](https://huggingface.co/espnet/xeus)** (E-Branchformer-based, multilingual SSL)
+- **ECAPA-TDNN** (Strong supervised baseline)
 
-- [HSE DLA Course Introduction Week](https://github.com/markovka17/dla/tree/2024/week01): combines the two seminars above into one with some updates, including an extra example for [Comet ML](https://www.comet.com/docs/v2/).
+### 🌍 Evaluation Datasets
+| Dataset           | Type           | Description                         |
+|------------------|----------------|-------------------------------------|
+| VoxCeleb1 / 2    | English        | Standard SV benchmark               |
+| SL-Celeb (Tamil) | Low-resource   | South Asian speaker verification    |
+| SL-Celeb (Sinhala) | Low-resource |                                      |
+| isiZulu          | Custom split   | Click language, Southern Africa     |
 
-- [PyTorch Basics](https://github.com/markovka17/dla/tree/2024/week01/intro_to_pytorch): several notebooks with [PyTorch](https://pytorch.org/docs/stable/index.html) basics and corresponding seminar recordings from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/).
+---
 
-To start working with a template, just click on the `use this template` button.
+## 🧠 Methodology
 
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
+Our approach builds upon **PMFA**, where hidden representations from selected layers of pretrained models are concatenated and aggregated using **attentive statistics pooling**, followed by **AAM-Softmax** classification.
 
-You can choose any of the branches as a starting point. [Set your choice as the default branch](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/changing-the-default-branch) in the repository settings. You can also [delete unnecessary branches](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-and-deleting-branches-within-your-repository).
+📌 See diagram in the paper for detailed design.
 
-## Examples
+---
 
-> [!IMPORTANT]
-> The main branch leaves some of the code parts empty or fills them with dummy examples, showing just the base structure. The final users can add code required for their own tasks.
+## 📊 Results
 
-You can find examples of this template completed for different tasks in other branches:
+We observed that **multilingual pretrained models significantly outperform monolingual baselines**, especially under data scarcity and language mismatch:
 
-- [Image classification](https://github.com/Blinorot/pytorch_project_template/tree/example/image-classification): simple classification problem on [MNIST](https://yann.lecun.com/exdb/mnist/) and [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) datasets.
+| Model             | VoxCeleb1-O | SL-Celeb-Tamil | Zulu   | VoxSRC21-Val |
+|------------------|-------------|----------------|--------|---------------|
+| ECAPA-TDNN       | 1.42%       | 3.27%          | 3.30%  | 5.05%         |
+| XEUS + PMFA      | 1.29%       | 6.01%          | 2.50%  | 4.06%         |
+| W2V2-BERT + PMFA | **0.46%**   | **1.39%**      | **1.90%** | **1.82%**     |
 
-- [ASR](https://github.com/Blinorot/pytorch_project_template/tree/example/asr): template for the automatic speech recognition (ASR) task. Some of the parts (for example, `collate_fn` and beam search for `text_encoder`) are missing for studying purposes of [HSE DLA course](https://github.com/markovka17/dla).
+> 📉 Metric: Equal Error Rate (EER)
+---
 
-## Installation
+## 🚀 Quickstart
 
-Installation may depend on your task. The general steps are the following:
+### Setup
 
-0. (Optional) Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) or `venv` ([`+pyenv`](https://github.com/pyenv/pyenv)).
+1. **Clone the repository and install dependencies:**
 
-   a. `conda` version:
+    ```bash
+    git clone https://github.com/Stefan2417/CourseWork.git
+    cd CourseWork
+    git lfs install
+    git clone https://huggingface.co/espnet/XEUS
+    pip install -r requirements.txt
+    ./scripts/download_test_pairs_voxceleb.sh
+    ```
 
-   ```bash
-   # create env
-   conda create -n project_env python=PYTHON_VERSION
+2. **Download required datasets:**
 
-   # activate env
-   conda activate project_env
-   ```
+The project uses the following datasets:
 
-   b. `venv` (`+pyenv`) version:
+- [VoxCeleb1](https://huggingface.co/datasets/ProgramComputer/voxceleb) and [VoxCeleb2](https://huggingface.co/datasets/ProgramComputer/voxceleb) — required for training and evaluation.
+- [NCHLT isiZulu Speech Corpus ](https://repo.sadilar.org/handle/20.500.12185/275) — required for evaluation.
+- [SLCeleb](https://ieee-dataport.org/documents/slceleb-speaker-verification) — required for evaluation.
+  You need to request access through the official website.
 
-   ```bash
-   # create env
-   ~/.pyenv/versions/PYTHON_VERSION/bin/python3 -m venv project_env
+- [MUSAN](https://www.openslr.org/17) - used for noise augmentation.
 
-   # alternatively, using default python version
-   python3 -m venv project_env
+- [RIRS_NOISES](https://www.openslr.org/28) - used for reverberation.
 
-   # activate env
-   source project_env
-   ```
+> Make sure to update all paths in your config files accordingly (see step 3).
+> 
+3. **Update paths in config files:**
 
-1. Install all required packages
+    All configuration files are located in the `src/configs` directory. Make sure to update all absolute paths to match your local environment. These include:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+    - Paths to datasets (e.g., MUSAN, RIRS, VoxCeleb)
+    - Trial or pair list files
+    - Audio directories
+    - Pretrained model checkpoints
+    - Output directories for logs and model checkpoints
 
-2. Install `pre-commit`:
-   ```bash
-   pre-commit install
-   ```
+4. **Train the model:**
 
-## How To Use
+    ```bash
+    python train.py --config src/configs/your_config.yaml
+    ```
 
-To train a model, run the following command:
+    > Replace `your_config.yaml` with the specific config file you want to use.
 
-```bash
-python3 train.py -cn=CONFIG_NAME HYDRA_CONFIG_ARGUMENTS
-```
+5. **Run evaluation:**
 
-Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` are optional arguments.
+    ```bash
+    python inference.py --config src/configs/your_config.yaml
+    ```
 
-To run inference (evaluate the model or save predictions):
+---
 
-```bash
-python3 inference.py HYDRA_CONFIG_ARGUMENTS
-```
 
-## Useful Links:
+## 📎 Resources
 
-You may find the following links useful:
+- [Full Report (PDF)](./CourseWork.pdf)
+- [Wav2Vec2-BERT Model](https://huggingface.co/facebook/w2v-bert-2.0)
+- [XEUS Architecture (ESPnet)](https://huggingface.co/espnet/xeus)
 
-- [Report branch](https://github.com/Blinorot/pytorch_project_template/tree/report): Guidelines for writing a scientific report/paper (with an emphasis on DL projects).
+---
 
-- [CLAIRE Template](https://github.com/CLAIRE-Labo/python-ml-research-template): additional template by [EPFL CLAIRE Laboratory](https://www.epfl.ch/labs/claire/) that can be combined with ours to enhance experiments reproducibility via [Docker](https://www.docker.com/).
+## 📦 Checkpoints
 
-- [Mamba](https://github.com/mamba-org/mamba) and [Poetry](https://python-poetry.org/): alternatives to [Conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [pip](https://pip.pypa.io/en/stable/installation/) package managers given above.
 
-- [Awesome README](https://github.com/matiassingers/awesome-readme): a list of awesome README files for inspiration. Check the basics [here](https://github.com/PurpleBooth/a-good-readme-template).
+Pretrained and fine-tuned model checkpoints used in this project are available on Hugging Face:
 
-## Credits
+👉 Coming soon...
 
-This repository is based on a heavily modified fork of [pytorch-template](https://github.com/victoresque/pytorch-template) and [asr_project_template](https://github.com/WrathOfGrapes/asr_project_template) repositories.
+You can use these checkpoints for evaluation or further fine-tuning.
 
-## License
+---
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
+## 🙌 Acknowledgements
+
+- Supervised by **Petr Markovich Grinberg**, HSE.
+- Experiments conducted using **HSE supercomputing cluster**.
+- Thanks to the creators of **ESPnet**, **HuggingFace**, **Transformers**, and **SpeechBrain**.
