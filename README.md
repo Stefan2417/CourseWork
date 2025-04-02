@@ -129,7 +129,7 @@ The project uses the following datasets:
 
 Pretrained and fine-tuned model checkpoints used in this project are available on Hugging Face:
 
-👉 Coming soon...
+👉 [Checkpoints](https://huggingface.co/Sttefan/speaker-verification-checkpoints)
 
 You can use these checkpoints for evaluation or further fine-tuning.
 
@@ -140,3 +140,8 @@ You can use these checkpoints for evaluation or further fine-tuning.
 - Supervised by **Petr Markovich Grinberg**, HSE.
 - Experiments conducted using **HSE supercomputing cluster**.
 - Thanks to the creators of **ESPnet**, **HuggingFace**, **Transformers**, and **SpeechBrain**.
+
+## 🧾 Credits
+
+Project template are based on  
+👉 [Blinorot/pytorch_project_template](https://github.com/Blinorot/pytorch_project_template)

@@ -25,12 +25,13 @@ def main(config):
     Args:
         config (DictConfig): hydra experiment config.
     """
-    os.environ["WANDB_API_KEY"] = "8dd6bf64e54bcd000df67566620fe0a54f6ce31a" #TODO - delete token
     set_random_seed(config.trainer.seed)
 
     project_config = OmegaConf.to_container(config)
     logger = setup_saving_and_logging(config)
     writer = instantiate(config.writer, logger, project_config)
+
+    os.environ["WANDB_API_KEY"] = config.wandb_api_key
 
     if config.trainer.device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -60,7 +61,7 @@ def main(config):
     # build optimizer, learning rate scheduler
     optimizer = torch.optim.Adam(params = model.get_lr_params(), weight_decay=config.optimizer.weight_decay)
 
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer) #TODO epoch_len
+    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer)
     scaler = torch.GradScaler()
 
     epoch_len = config.trainer.get("epoch_len", None)
