@@ -1,2 +1,0 @@
-_target_: src.model.Wav2vecBert2Base
-pretrained: '/home/stefan/Documents/CourseWork/pretrained/'

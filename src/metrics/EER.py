@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 from src.metrics.base_metric import BaseMetric
+
 logger = logging.getLogger(__name__)
 
 class EERMetric(BaseMetric):
@@ -63,9 +64,6 @@ class EERMetric(BaseMetric):
 
 
     def __call__(self, directory=None, **kwargs) -> float:
-        """
-        Args:
-        """
 
         if len(self.embeddings_cache) == 0 or 'batch_embeddings' in kwargs:
             self._cache_embeddings(directory, **kwargs)

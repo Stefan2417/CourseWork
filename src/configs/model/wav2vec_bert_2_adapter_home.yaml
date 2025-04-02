@@ -3,3 +3,5 @@ layers: [11, 12, 13, 14, 15, 16, 17]
 emb_dim: 512
 freeze_strategy: ''
 pretrained: '/home/stefan/Documents/CourseWork/pretrained/'
+main_lr: 1e-6
+adapter_lr: 1e-4
