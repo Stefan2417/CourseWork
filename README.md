@@ -31,7 +31,7 @@ This repository contains the implementation and experimental setup of a research
 ### 🌍 Evaluation Datasets
 | Dataset           | Type           | Description                         |
 |------------------|----------------|-------------------------------------|
-| VoxCeleb1 / 2    | English        | Standard SV benchmark               |
+| VoxCeleb1 / 2    | Multilingual        | Standard SV benchmark               |
 | SL-Celeb (Tamil) | Low-resource   | South Asian speaker verification    |
 | SL-Celeb (Sinhala) | Low-resource |                                      |
 | isiZulu          | Custom split   | Click language, Southern Africa     |
