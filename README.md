@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/github/license/Stefan2417/CourseWork)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![HuggingFace Models](https://img.shields.io/badge/models-HuggingFace-orange)]([https://huggingface.co/facebook/w2v-bert-2.0](https://huggingface.co/Sttefan/speaker-verification-checkpoints))
+[![HuggingFace Models](https://img.shields.io/badge/models-HuggingFace-orange)](https://huggingface.co/Sttefan/speaker-verification-checkpoints)
 
 ---
 
